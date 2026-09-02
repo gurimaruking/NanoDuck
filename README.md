@@ -265,3 +265,20 @@ base_ang_vel(3) + gravity(3) + joint_pos(10) + joint_vel(10) + last_action(10) =
    参照用であって派生元にはしない
 4. **ESP32-S3 への載せ替え** — 49→128→128→10 なら 23k パラメータ = 92 KB で
    量子化なしに内蔵 SRAM に載る
+
+---
+
+## ライセンス
+
+上流 microduck_rl と同じ 2 分割構成:
+
+- **コード** (`analysis/`, `sim/*.py`, `cad/*.py`, ドキュメント) — [Apache 2.0](LICENSE)
+- **3D モデル** (`cad/microduck_src/`) — **CC BY-NC-SA 4.0**。
+  Pollen Robotics の [microduck_rl](https://github.com/pollen-robotics/microduck_rl)
+  からのコピーで、**商用利用不可・継承必須**。派生物である
+  `analysis/microduck_demand.npz` も同条件
+
+詳細と、なぜこれらのファイルを同梱しているかは [NOTICE.md](NOTICE.md)。
+
+本家は Pollen Robotics の [MicroDuck](https://pollen-robotics.com/microduck)。
+NanoDuck は非公式の独立リデザインで、Pollen Robotics とは関係ありません。
