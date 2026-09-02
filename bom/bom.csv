@@ -18,6 +18,6 @@ wiring,ribbon + JST-SH assortment,signal,1,800,800,,3.0,
 mech,bearing MR63ZZ,3x6x2.5mm,12,120,1440,0.4,4.0,"MG90S output shaft is single-sided; every joint needs an idler bearing opposite the horn."
 mech,carbon rod 3mm,for the shin,1,500,500,,2.0,
 mech,M2 screw assortment,6/8/10mm + nuts,1,1200,1200,,6.0,
-mech,PETG filament,1kg,1,2500,2500,,26.0,"~26g printed. PETG over PLA: the joints see real load."
+mech,PETG filament,1kg,1,2500,2500,,33.0,"~33g printed: trunk shell 10, 8 joint brackets 12, feet 7, head/neck 4. Building the geometry turned up brackets the first round-number estimate missed. PETG over PLA: the joints see real load."
 ,,,,PURCHASE TOTAL,28695,,,"Includes spares. Servo cost ~7300 JPY vs ~63000 for 14 XL330."
-,,,,ON-ROBOT MASS,,,189.4,"Matches analysis/design_point.py. Worst joint head_yaw at 76% -- the same place MicroDuck's own knee sits."
+,,,,ON-ROBOT MASS,,,196.4,"Matches sim/nanoduck.xml exactly -- the model is the authority on mass. Worst joint: knee at 62%, comfortably under the 76% MicroDuck's own knee runs at."

@@ -160,7 +160,39 @@ MG90S_4V8 = ServoSpec(
     latency_s=0.020,
 )
 
-SERVOS = {"mg90s-6v": MG90S_6V, "mg90s-4v8": MG90S_4V8, "xl330": XL330_7V4}
+# MG92B: NanoDuck's knees, and only its knees.  Same 22.8 x 12.2 footprint as an
+# MG90S for +0.4 g, but ~45% more stall torque -- which moves the whole robot's
+# mass budget from 205 g to 245 g (analysis/design_point.py).
+# The stall figure is quoted inconsistently across vendors; this is the
+# conservative end and it MUST be bench-measured before the design leans on it.
+MG92B_6V = ServoSpec(
+    name="MG92B @6.0V",
+    tau_stall=0.310,
+    w_noload=math.radians(60.0) / 0.08,
+    kp=0.310 / math.radians(5.0),
+    deadband_rad=math.radians(1.0),
+    frictionloss=0.014,
+    damping=0.005,
+    armature=0.003,
+    latency_s=0.020,
+)
+
+# Generic 3.7 g micro servo for the neck and head yaw.  Cheap ones have a wider
+# deadband than an MG90S, which is fine on a head and fatal on a leg.
+MICRO_6V = ServoSpec(
+    name="micro 3.7g @6.0V",
+    tau_stall=0.060,
+    w_noload=math.radians(60.0) / 0.10,
+    kp=0.060 / math.radians(5.0),
+    deadband_rad=math.radians(1.5),
+    frictionloss=0.004,
+    damping=0.002,
+    armature=0.001,
+    latency_s=0.020,
+)
+
+SERVOS = {"mg90s-6v": MG90S_6V, "mg90s-4v8": MG90S_4V8, "mg92b-6v": MG92B_6V,
+          "micro-6v": MICRO_6V, "xl330": XL330_7V4}
 
 
 class ServoBank:
@@ -172,17 +204,24 @@ class ServoBank:
     torque a real servo would produce.  Nothing else in the sim has to change.
     """
 
-    def __init__(self, model: mujoco.MjModel, spec: ServoSpec, current_limit: float | None = None):
+    def __init__(self, model: mujoco.MjModel, spec: ServoSpec,
+                 current_limit: float | None = None, joints=None):
+        """`joints` selects a subset of actuator indices; None means all of them.
+
+        A robot can mix servo types (NanoDuck puts MG92B in the knees and micro
+        servos in the head), so a bank owns a subset and several banks coexist.
+        """
         self.spec = spec
-        self.n = model.nu
+        self.joints = np.arange(model.nu) if joints is None else np.asarray(joints, dtype=int)
+        self.n = len(self.joints)
         self.current_limit = current_limit
-        # qpos/qvel addresses of the joint behind each actuator.
+        # qpos/qvel addresses of the joint behind each of our actuators.
         self.qpos_adr = np.empty(self.n, dtype=int)
         self.qvel_adr = np.empty(self.n, dtype=int)
-        for i in range(self.n):
+        for k, i in enumerate(self.joints):
             jid = model.actuator_trnid[i, 0]
-            self.qpos_adr[i] = model.jnt_qposadr[jid]
-            self.qvel_adr[i] = model.jnt_dofadr[jid]
+            self.qpos_adr[k] = model.jnt_qposadr[jid]
+            self.qvel_adr[k] = model.jnt_dofadr[jid]
         self._delay_buf: list[np.ndarray] = []
         self._delay_steps = 0
         self.clipped_fraction = 0.0
@@ -198,7 +237,7 @@ class ServoBank:
         Python: gaintype FIXED with gain 1 and biastype NONE makes ``ctrl``
         the joint torque directly.
         """
-        for i in range(self.n):
+        for k, i in enumerate(self.joints):
             model.actuator_gaintype[i] = mujoco.mjtGain.mjGAIN_FIXED
             model.actuator_biastype[i] = mujoco.mjtBias.mjBIAS_NONE
             model.actuator_gainprm[i, :] = 0.0
@@ -208,7 +247,7 @@ class ServoBank:
             model.actuator_ctrllimited[i] = 1
             model.actuator_forcerange[i] = (-self.spec.tau_stall, self.spec.tau_stall)
             model.actuator_forcelimited[i] = 1
-            dof = self.qvel_adr[i]
+            dof = self.qvel_adr[k]
             model.dof_frictionloss[dof] = self.spec.frictionloss
             model.dof_damping[dof] = self.spec.damping
             model.dof_armature[dof] = self.spec.armature
@@ -218,11 +257,12 @@ class ServoBank:
     def torque(self, data: mujoco.MjData, target: np.ndarray) -> np.ndarray:
         """Torque each servo produces this step, given the commanded positions.
 
-        `target` is what the policy wrote to ``data.ctrl`` (joint angles in rad).
+        `target` is the FULL ``data.ctrl``-shaped vector of joint angles [rad];
+        the returned torques correspond to ``self.joints``, in that order.
         """
         s = self.spec
         # Command transport delay: the servo acts on a target from latency_s ago.
-        self._delay_buf.append(np.asarray(target, dtype=float).copy())
+        self._delay_buf.append(np.asarray(target, dtype=float)[self.joints].copy())
         if len(self._delay_buf) > self._delay_steps + 1:
             self._delay_buf.pop(0)
         cmd = self._delay_buf[0]

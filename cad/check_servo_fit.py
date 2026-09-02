@@ -127,8 +127,8 @@ def main() -> None:
         print("   %-24s %5.1f mm of chain per servo (incl. 8 mm bracket)"
               % (label, need))
     print()
-    thigh = 35.0               # NanoDuck v2, from analysis/design_point.py
-    print("NanoDuck v2 uses 35 mm thigh and 35 mm shin, one servo each:")
+    thigh = 25.0               # NanoDuck v2, from cad/build_nanoduck.py
+    print("NanoDuck v2 uses 25 mm thigh and 25 mm shin, one servo each:")
     print("   packing ratio = %.1f / %.1f = %.2f   (MicroDuck lives at 1.44)"
           % (12.2 + 8.0, thigh, (12.2 + 8.0) / thigh))
     print()

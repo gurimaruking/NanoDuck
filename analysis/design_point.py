@@ -113,15 +113,21 @@ ASSIGN = {
 }
 ALL_MG90S = {j: ("micro3.7g" if s == "micro3.7g" else "MG90S@6V") for j, s in ASSIGN.items()}
 
-LEG_MM = 70.0
+LEG_MM = 50.0     # thigh 25 + shin 25; see cad/build_nanoduck.py
+# Itemised to match sim/nanoduck.xml exactly -- the model is the authority on
+# mass now, because building the geometry turned up brackets the round number
+# missed (8 joint brackets, not the 6 the first estimate assumed).
 BOM = [
-    ("MG90S x6 (hips, ankles)", 6 * 0.0134),
+    ("MG90S x6 (hip roll/pitch, ankles)", 6 * 0.0134),
     ("MG92B x2 (knees)", 2 * 0.0138),
-    ("micro servo x2 (head)", 2 * 0.0037),
+    ("micro servo x2 (neck, head yaw)", 2 * 0.0037),
     ("2S 450 mAh LiHV", 0.028),
     ("control PCB (ESP32-S3-MINI + driver + ADC + BEC)", 0.012),
     ("wiring", 0.008),
-    ("printed structure, rods, bearings, screws", 0.026),
+    ("trunk shell", 0.010),
+    ("joint brackets + idler bearings + screws, x8", 8 * 0.0015),
+    ("feet x2", 2 * 0.0035),
+    ("neck bracket, head shell, beak", 0.0005 + 0.003 + 0.0005),
 ]
 
 
