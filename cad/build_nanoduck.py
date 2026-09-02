@@ -195,9 +195,14 @@ def leg(side, sign):
     roll0 = -HIP_ROLL_0 if side == "left" else HIP_ROLL_0
     x = []
     a = x.append
+    # One source of truth for the limits. These were hardcoded to +/-1.571 for a
+    # while, so the JOINTS table (and therefore every actuator ctrlrange) carried
+    # the measured mechanism travel while the joints themselves let the policy
+    # swing 90 degrees into a bracket. check_joints() catches that now.
+    rng = {n.split("_", 1)[1]: r for n, _, r, _ in JOINTS if n.startswith("left_")}
     a('      <body name="%s_hip" pos="%s">\n' % (side, m(0, sign * HIP_Y, -TRUNK[2] / 2)))
     a('        <joint name="%s_hip_roll" axis="1 0 0" range="%.3f %.3f"/>\n'
-      % (side, -0.384, 0.384))
+      % (side, *rng["hip_roll"]))
     # The hip_pitch servo rides on the roll link, at the pitch axis.
     a(COS.printed_geom("%s_hip" % side))
     a(servo_geom("%s_hip_pitch_servo" % side, "MG90S", (-6, 0, -HIP_ROLL_TO_PITCH)))
@@ -206,21 +211,21 @@ def leg(side, sign):
 
     a('        <body name="%s_thigh" pos="%s">\n' % (side, m(0, 0, -HIP_ROLL_TO_PITCH)))
     a('          <joint name="%s_hip_pitch" axis="0 1 0" range="%.3f %.3f"/>\n'
-      % (side, -1.571, 1.571))
+      % (side, *rng["hip_pitch"]))
     a(COS.printed_geom("%s_thigh" % side))
     a(servo_geom("%s_knee_servo" % side, "MG92B", (-6, 0, -THIGH)))
     a(link_geom("%s_thigh_link" % side, (12, 16, THIGH), (0, 0, -THIGH / 2), M_THIGH))
 
     a('          <body name="%s_shin" pos="%s">\n' % (side, m(0, 0, -THIGH)))
     a('            <joint name="%s_knee" axis="0 1 0" range="%.3f %.3f"/>\n'
-      % (side, -1.571, 1.571))
+      % (side, *rng["knee"]))
     a(COS.printed_geom("%s_shin" % side))
     a(servo_geom("%s_ankle_servo" % side, "MG90S", (-6, 0, -SHIN)))
     a(link_geom("%s_shin_link" % side, (10, 14, SHIN), (0, 0, -SHIN / 2), M_SHIN))
 
     a('            <body name="%s_foot" pos="%s">\n' % (side, m(0, 0, -SHIN)))
     a('              <joint name="%s_ankle" axis="0 1 0" range="%.3f %.3f"/>\n'
-      % (side, -1.571, 1.571))
+      % (side, *rng["ankle"]))
     a(COS.printed_geom("%s_foot" % side))
     a(link_geom("%s_ankle_bracket" % side, (12, 16, ANKLE_TO_SOLE),
                 (0, 0, -ANKLE_TO_SOLE / 2), M_FOOT_MOUNT))
@@ -347,6 +352,77 @@ def trunk_z() -> float:
     return ANKLE_TO_SOLE + FOOT[2] + drop + HIP_ROLL_TO_PITCH + TRUNK[2] / 2
 
 
+def check_joints(scene_path: str) -> bool:
+    """Are the joints the right way round?
+
+    Cheap to get wrong and invisible in a render: an axis that points the other
+    way, a home pose outside the travel the mechanism has, a left leg that is
+    not the mirror of the right, an actuator whose ctrlrange disagrees with the
+    joint it drives.  Each of these produces a model that loads, simulates, and
+    trains a policy for a robot that does not exist.
+
+    Tested against the compiled model, not the source, so a typo in the emitted
+    XML cannot slip through.
+    """
+    import mujoco
+    import numpy as np
+
+    m = mujoco.MjModel.from_xml_path(scene_path)
+    d = mujoco.MjData(m)
+    mujoco.mj_resetDataKeyframe(m, d, 0)
+    mujoco.mj_forward(m, d)
+
+    want_axis = {"hip_roll": (1, 0, 0), "hip_pitch": (0, 1, 0), "knee": (0, 1, 0),
+                 "ankle": (0, 1, 0), "neck_pitch": (0, 1, 0), "head_yaw": (0, 0, 1)}
+    print("\njoint sanity:")
+    ok = True
+    for name, _, (lo, hi), home in JOINTS:
+        jid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_JOINT, name)
+        aid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_ACTUATOR, name)
+        axis = tuple(int(round(v)) for v in m.jnt_axis[jid])
+        key = name.split("_", 1)[1] if name.startswith(("left_", "right_")) else name
+        jr = m.jnt_range[jid]
+        cr = m.actuator_ctrlrange[aid]
+        q = float(d.qpos[m.jnt_qposadr[jid]])
+        bad = []
+        if axis != want_axis[key]:
+            bad.append("axis %s != %s" % (axis, want_axis[key]))
+        if not (jr[0] - 1e-6 <= home <= jr[1] + 1e-6):
+            bad.append("home %.3f outside range" % home)
+        if abs(q - home) > 1e-6:
+            bad.append("keyframe %.3f != home %.3f" % (q, home))
+        if not np.allclose(cr, jr, atol=1e-6):
+            bad.append("ctrlrange != joint range")
+        margin = min(home - jr[0], jr[1] - home)
+        ok &= not bad
+        print("   %-16s axis %-9s range %+6.2f..%+6.2f  home %+6.3f  margin %+5.2f rad  %s"
+              % (name, str(axis), jr[0], jr[1], home, margin,
+                 "ok" if not bad else "BAD: " + "; ".join(bad)))
+
+    # Left and right must be mirror images across Y, not copies shifted sideways.
+    for part in ("hip", "thigh", "shin", "foot"):
+        l = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "left_" + part)
+        r = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, "right_" + part)
+        pl, pr = d.xpos[l], d.xpos[r]
+        good = abs(pl[0] - pr[0]) < 1e-6 and abs(pl[2] - pr[2]) < 1e-6 \
+            and abs(pl[1] + pr[1]) < 1e-6
+        ok &= good
+        print("   %-16s left %s  right %s  %s"
+              % (part + " mirror", np.round(1000 * pl, 1), np.round(1000 * pr, 1),
+                 "ok" if good else "NOT MIRRORED"))
+
+    # The home crouch is supposed to put each ankle directly under its hip.
+    for side in ("left", "right"):
+        hip = d.xpos[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, side + "_thigh")]
+        ank = d.xpos[mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_BODY, side + "_foot")]
+        dx = 1000 * (ank[0] - hip[0])
+        good = abs(dx) < 0.5
+        ok &= good
+        print("   %-16s ankle is %+.2f mm fore-aft of the hip   %s"
+              % (side + " crouch", dx, "ok" if good else "KNEE SIGN WRONG"))
+    return ok
+
+
 def check_static_balance(scene_path: str) -> None:
     """Is the centre of mass inside the support polygon in the home pose?
 
@@ -434,7 +510,14 @@ def main() -> None:
     print("\nhome-pose trunk height: %.1f mm" % trunk_z())
     print("leg (thigh + shin):     %.1f mm" % (THIGH + SHIN))
     print("DOF:                    %d" % len(JOINTS))
-    check_static_balance(os.path.join(OUT, "scene_nanoduck.xml"))
+    scene = os.path.join(OUT, "scene_nanoduck.xml")
+    print()
+    print("cosmetic orientation:")
+    ok = COS.check_orientation()
+    ok &= check_joints(scene)
+    check_static_balance(scene)
+    if not ok:
+        raise SystemExit("\nCHECKS FAILED -- the model is wrong, do not train on it.")
 
 
 if __name__ == "__main__":

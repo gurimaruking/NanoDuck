@@ -46,13 +46,16 @@ MJCF = os.path.join(SRC, "robot_walk.xml")
 # `python cosmetics.py` prints the resulting extents so it can be checked
 # rather than believed.
 GROUPS = {
-    # head: 90 deg about Y puts the beak axis along +X. Checked by extent, not
-    # by eye -- the cluster measures 76.1 x 56.9 x 36.8 mm, and 76.1 is the
-    # 123 mm MicroDuck head at 0.62, so it is exactly fore-aft. The nose-up look
-    # in a render is MicroDuck's own wedge-shaped skull, not a misalignment;
-    # trying 55 and 135 deg by eye made it worse in both directions.
+    # head: solved, not chosen. See check_orientation() -- this is the only
+    # axis-aligned rotation that puts the top shell above the bottom one, the
+    # bill forward, and the long axis fore-aft.
+    #
+    # It was (180, 90, 0) for a while, which passed a test on the cluster's
+    # fore-aft EXTENT and shipped the duck upside down. Extent along X says the
+    # long axis is X; it says nothing whatever about a 180 degree flip around
+    # it. Up/down and front/back are separate facts and need separate tests.
     "head": (0.62, ["bottom_head_shell", "top_head_shell", "face_part", "jaw", "noenoeil"],
-             (180.0, 90.0, 0.0)),
+             (0.0, 270.0, 0.0)),
     "trunk": (0.85, ["left_shell", "right_shell"], (0.0, 0.0, 0.0)),
     "sole_left": (0.75, ["sole_left"], (90.0, 0.0, 0.0)),
     "sole_right": (0.75, ["sole_right"], (90.0, 0.0, 0.0)),
@@ -162,11 +165,64 @@ def mesh_assets():
     return "".join(out)
 
 
+def posed_mesh(group, name):
+    """One mesh of a group, in NanoDuck's body axes."""
+    scale, _, _ = GROUPS[group]
+    pos, quat = upstream_transforms()[name]
+    m = load_stl_mm(name)
+    m.apply_scale(scale)
+    m.apply_transform(quat_matrix(quat))
+    m.apply_translation(pos * 1000.0 * scale)
+    m.apply_transform(extra_matrix(group))
+    return m
+
+
+def check_orientation(verbose=True):
+    """Is the duck the right way up and facing forward?
+
+    A bounding-box extent cannot answer this.  "76.1 mm fore-aft" proves the
+    long axis is X and is perfectly happy with the head rotated 180 degrees
+    about that axis -- which is exactly how a flipped head shipped once.
+
+    So test the facts separately, against parts whose relative position is not
+    in doubt: the top shell is above the bottom one, the bill is ahead of the
+    skull, the eyes are in the upper half, and the left panel is to the left.
+    Each is a signed distance between two centroids; each must be positive.
+    """
+    checks = []
+
+    def cen(group, name):
+        return posed_mesh(group, name).centroid
+
+    h = lambda n: cen("head", n)
+    checks += [
+        ("head is not upside down", h("top_head_shell")[2] - h("bottom_head_shell")[2]),
+        ("bill points forward", h("jaw")[0] - h("bottom_head_shell")[0]),
+        ("eyes are in the upper half", h("noenoeil")[2] - h("bottom_head_shell")[2]),
+        ("left body panel is on the left",
+         cen("trunk", "left_shell")[1] - cen("trunk", "right_shell")[1]),
+    ]
+    lo, hi = cluster_bounds("head")
+    checks.append(("head is longest fore-aft",
+                   (hi - lo)[0] - max((hi - lo)[1], (hi - lo)[2])))
+
+    ok = True
+    for label, value in checks:
+        good = value > 0.0
+        ok &= good
+        if verbose:
+            print("   %-32s %+7.1f mm   %s" % (label, value, "ok" if good else "WRONG"))
+    return ok
+
+
 if __name__ == "__main__":
     for g in GROUPS:
         lo, hi = cluster_bounds(g)
         print("%-12s bbox %6.1f x %6.1f x %6.1f mm   centre %s"
               % (g, *(hi - lo), np.round((lo + hi) / 2, 1)))
+    print()
+    print("orientation:")
+    raise SystemExit(0 if check_orientation() else 1)
 
 
 # --- the printed structure, as visual meshes ---------------------------------
