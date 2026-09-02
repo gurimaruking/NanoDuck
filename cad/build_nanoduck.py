@@ -43,6 +43,8 @@ from __future__ import annotations
 
 import os
 
+import cosmetics as COS
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.abspath(os.path.join(HERE, "..", "sim"))
 
@@ -57,8 +59,11 @@ SERVO = {
 }
 
 # --- Geometry [mm] ------------------------------------------------------------
-TRUNK = (62.0, 44.0, 34.0)      # electronics box: 2S 450mAh pack + 40x30 PCB,
-                                # sized longer than tall so it reads as a body
+# Trunk, head and sole boxes are sized to the COSMETIC clusters they stand in
+# for (cad/cosmetics.py prints the measured extents).  They carry the shells'
+# mass, so if the box and the shell disagree the inertia is wrong -- the head
+# was a 34x26x24 box standing in for a 76x57x37 shell until this was fixed.
+TRUNK = (68.8, 54.4, 35.5)      # = cosmetic left_shell + right_shell at 0.85
 HIP_Y = 20.0                    # half stance width at the hip
 HIP_ROLL_TO_PITCH = 22.0        # roll and pitch axes are near-coincident
 # LEG = 50 mm, down from a first cut at 70 mm.  Shorter legs are better on every
@@ -70,15 +75,17 @@ HIP_ROLL_TO_PITCH = 22.0        # roll and pitch axes are near-coincident
 THIGH = 25.0                    # hip_pitch -> knee
 SHIN = 25.0                     # knee -> ankle
 ANKLE_TO_SOLE = 12.0
-FOOT = (42.0, 26.0, 4.0)        # ducks have big webbed feet, and a wide sole is
-                                # free stability on a robot with no ankle roll
+FOOT = (40.5, 30.8, 4.0)        # footprint of the cosmetic sole at 0.75; kept
+                                # thin as a contact box, the shell is visual
 FOOT_X = 3.0                    # sole offset ahead of the ankle; centres the
                                 # support polygon on the CoM (see check_static_balance)
 NECK_X, NECK_Z = 16.0, 14.0     # neck_pitch axis, well forward on the trunk lid
-NECK_LEN = 20.0                 # neck_pitch -> head_yaw
-HEAD = (34.0, 26.0, 24.0)
-HEAD_Z = 12.0
-BEAK = (22.0, 13.0, 4.0)       # flat and forward, the one unmistakably duck part
+NECK_LEN = 20.0                 # neck_pitch -> head_yaw (printed part length)
+NECK_SINK = 8.0                 # how far the neck root sits INSIDE the trunk, so
+                                # the head nestles instead of floating above it
+HEAD = (76.1, 56.9, 36.8)       # = cosmetic head cluster at 0.62
+HEAD_Z = 4.0                    # head cluster centre above the head_yaw axis
+
 
 # --- Masses [kg] not accounted for by a servo box -----------------------------
 # These are no longer estimates.  cad/parts.py generates the real printed parts
@@ -131,7 +138,8 @@ HIP_ROLL_0 = 0.0
 HIP_PITCH_0 = 0.20              # 11.5 deg
 KNEE_0 = -2.0 * HIP_PITCH_0     # -22.9 deg, keeps the ankle under the hip
 ANKLE_0 = HIP_PITCH_0           # levels the sole
-NECK_PITCH_0 = 0.35             # leans the neck forward: a duck, not a meerkat
+NECK_PITCH_0 = 0.15             # a little forward lean; the head is heavy and
+                                # the whole of it hangs off this one micro servo
 
 # Leg pitch limits are MEASURED, not chosen: cad/parts.py sweeps each printed
 # joint and finds where the child's yoke fouls the parent's carrier
@@ -191,6 +199,7 @@ def leg(side, sign):
     a('        <joint name="%s_hip_roll" axis="1 0 0" range="%.3f %.3f"/>\n'
       % (side, -0.384, 0.384))
     # The hip_pitch servo rides on the roll link, at the pitch axis.
+    a(COS.printed_geom("%s_hip" % side))
     a(servo_geom("%s_hip_pitch_servo" % side, "MG90S", (-6, 0, -HIP_ROLL_TO_PITCH)))
     a(link_geom("%s_hip_bracket" % side, (14, 20, HIP_ROLL_TO_PITCH),
                 (0, 0, -HIP_ROLL_TO_PITCH / 2), M_HIP_YOKE))
@@ -198,23 +207,28 @@ def leg(side, sign):
     a('        <body name="%s_thigh" pos="%s">\n' % (side, m(0, 0, -HIP_ROLL_TO_PITCH)))
     a('          <joint name="%s_hip_pitch" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
+    a(COS.printed_geom("%s_thigh" % side))
     a(servo_geom("%s_knee_servo" % side, "MG92B", (-6, 0, -THIGH)))
     a(link_geom("%s_thigh_link" % side, (12, 16, THIGH), (0, 0, -THIGH / 2), M_THIGH))
 
     a('          <body name="%s_shin" pos="%s">\n' % (side, m(0, 0, -THIGH)))
     a('            <joint name="%s_knee" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
+    a(COS.printed_geom("%s_shin" % side))
     a(servo_geom("%s_ankle_servo" % side, "MG90S", (-6, 0, -SHIN)))
     a(link_geom("%s_shin_link" % side, (10, 14, SHIN), (0, 0, -SHIN / 2), M_SHIN))
 
     a('            <body name="%s_foot" pos="%s">\n' % (side, m(0, 0, -SHIN)))
     a('              <joint name="%s_ankle" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
+    a(COS.printed_geom("%s_foot" % side))
     a(link_geom("%s_ankle_bracket" % side, (12, 16, ANKLE_TO_SOLE),
                 (0, 0, -ANKLE_TO_SOLE / 2), M_FOOT_MOUNT))
     a('              <geom name="%s_sole" type="box" size="%s" pos="%s" mass="%.5f" '
       'class="collision" rgba="0.95 0.55 0.10 1"/>\n'
       % (side, half(FOOT), m(FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2] / 2), M_SOLE))
+    a(COS.cluster_geoms("sole_" + side,
+                        (FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2] / 2)))
     a('              <site name="%s_foot" group="3" pos="%s"/>\n'
       % (side, m(FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2])))
     a('            </body>\n')
@@ -228,13 +242,28 @@ def build_robot() -> str:
     x = []
     a = x.append
     a('<mujoco model="nanoduck">\n')
-    a('  <compiler angle="radian" autolimits="true"/>\n')
+    # meshdir points at the upstream shells, so the repo keeps exactly one copy
+    # of those files and sim/ does not duplicate 26 MB of STL.
+    a('  <compiler angle="radian" autolimits="true" '
+      'meshdir="../cad/microduck_src"/>\n')
     a('  <option timestep="0.005" iterations="10" ls_iterations="10"/>\n\n')
     a('  <default>\n')
     a('    <!-- Only the soles collide, as in MicroDuck robot_walk.xml: falling is\n')
     a('         cheap during velocity training and the contacts cost solver time. -->\n')
+    # Group 3, not 2: these boxes carry the mass and inertia but they stand in
+    # for the shells, and at the same size they hide them. A renderer showing
+    # group 2 gets the duck; showing group 3 gets the mass model.
     a('    <default class="viz">\n')
-    a('      <geom contype="0" conaffinity="0" group="2"/>\n')
+    a('      <geom contype="0" conaffinity="0" group="3"/>\n')
+    a('    </default>\n')
+    a('    <!-- The cosmetic shells: MicroDuck\'s own geometry, visual only.\n')
+    a('         Group 2, so a renderer can show the skin and hide the boxes. -->\n')
+    a('    <default class="skin">\n')
+    # mass="0" is essential: MuJoCo would otherwise infer mass from each mesh's
+    # volume and add it on top of the boxes that already carry it. Leaving it
+    # out took the robot from 241 g to 398 g without a word of complaint.
+    a('      <geom type="mesh" mass="0" contype="0" conaffinity="0" group="2" '
+      'rgba="0.96 0.94 0.88 1"/>\n')
     a('    </default>\n')
     a('    <default class="collision">\n')
     a('      <geom contype="1" conaffinity="1" group="3" condim="3" friction="1.0 0.005 0.0001"/>\n')
@@ -244,6 +273,11 @@ def build_robot() -> str:
     a('         but they make the bare model behave sensibly on its own. -->\n')
     a('    <joint damping="0.005" frictionloss="0.012" armature="0.003"/>\n')
     a('  </default>\n\n')
+
+    a('  <asset>\n')
+    a(COS.mesh_assets())
+    a(COS.printed_assets())
+    a('  </asset>\n\n')
 
     a('  <worldbody>\n')
     a('    <body name="trunk_base" pos="0 0 %.4f">\n' % (trunk_z() * MM))
@@ -256,6 +290,7 @@ def build_robot() -> str:
       'rgba="0.2 0.3 0.6 1"/>\n' % (half((45, 20, 11)), m(0, 0, -8), M_BATTERY))
     a('      <geom name="pcb" type="box" size="%s" pos="%s" mass="%.5f" class="viz" '
       'rgba="0.1 0.4 0.2 1"/>\n' % (half((40, 30, 5)), m(0, 0, 6), M_PCB))
+    a(COS.cluster_geoms("trunk", (0.0, 0.0, 0.0)))
     # The hip_roll servos are bolted into the trunk and drive the hip links.
     a(servo_geom("left_hip_roll_servo", "MG90S", (0, HIP_Y, -TRUNK[2] / 2 + 6)))
     a(servo_geom("right_hip_roll_servo", "MG90S", (0, -HIP_Y, -TRUNK[2] / 2 + 6)))
@@ -267,14 +302,15 @@ def build_robot() -> str:
     a(left)
 
     # Head
-    a('      <body name="neck" pos="%s">\n' % m(NECK_X, 0, TRUNK[2] / 2))
+    a('      <body name="neck" pos="%s">\n' % m(NECK_X, 0, TRUNK[2] / 2 - NECK_SINK))
     a('        <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>\n')
+    a(COS.printed_geom("neck"))
     a(servo_geom("head_yaw_servo", "micro", (0, 0, NECK_LEN)))
     a(link_geom("neck_link", (10, 12, NECK_LEN), (0, 0, NECK_LEN / 2), M_NECK_LINK))
     a('        <body name="head" pos="%s">\n' % m(0, 0, NECK_LEN))
     a('          <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>\n')
-    a(link_geom("head_shell", HEAD, (2, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
-    a(link_geom("beak", BEAK, (22, 0, HEAD_Z - 5), 0.0005, "0.95 0.65 0.10 1"))
+    a(link_geom("head_shell", HEAD, (0, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
+    a(COS.cluster_geoms("head", (0.0, 0.0, HEAD_Z)))
     a('          <site name="head_camera" group="3" pos="%s"/>\n' % m(16, 0, HEAD_Z + 4))
     a('          <site name="mouth_tip" group="3" pos="%s"/>\n' % m(30, 0, HEAD_Z - 5))
     a('        </body>\n')

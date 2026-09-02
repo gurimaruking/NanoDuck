@@ -1,12 +1,17 @@
 <mujoco model="nanoduck">
-  <compiler angle="radian" autolimits="true"/>
+  <compiler angle="radian" autolimits="true" meshdir="../cad/microduck_src"/>
   <option timestep="0.005" iterations="10" ls_iterations="10"/>
 
   <default>
     <!-- Only the soles collide, as in MicroDuck robot_walk.xml: falling is
          cheap during velocity training and the contacts cost solver time. -->
     <default class="viz">
-      <geom contype="0" conaffinity="0" group="2"/>
+      <geom contype="0" conaffinity="0" group="3"/>
+    </default>
+    <!-- The cosmetic shells: MicroDuck's own geometry, visual only.
+         Group 2, so a renderer can show the skin and hide the boxes. -->
+    <default class="skin">
+      <geom type="mesh" mass="0" contype="0" conaffinity="0" group="2" rgba="0.96 0.94 0.88 1"/>
     </default>
     <default class="collision">
       <geom contype="1" conaffinity="1" group="3" condim="3" friction="1.0 0.005 0.0001"/>
@@ -17,66 +22,104 @@
     <joint damping="0.005" frictionloss="0.012" armature="0.003"/>
   </default>
 
+  <asset>
+    <mesh name="bottom_head_shell" file="bottom_head_shell.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="top_head_shell" file="top_head_shell.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="face_part" file="face_part.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="jaw" file="jaw.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="noenoeil" file="noenoeil.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="left_shell" file="left_shell.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="right_shell" file="right_shell.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="sole_left" file="sole_left.stl" scale="0.7500 0.7500 0.7500"/>
+    <mesh name="sole_right" file="sole_right.stl" scale="0.7500 0.7500 0.7500"/>
+    <mesh name="hip_yoke_L" file="../print/hip_yoke_L.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="hip_yoke_R" file="../print/hip_yoke_R.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thigh_L" file="../print/thigh_L.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="thigh_R" file="../print/thigh_R.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="shin_L" file="../print/shin_L.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="shin_R" file="../print/shin_R.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="foot_mount_L" file="../print/foot_mount_L.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="foot_mount_R" file="../print/foot_mount_R.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="neck_link" file="../print/neck_link.stl" scale="0.001 0.001 0.001"/>
+  </asset>
+
   <worldbody>
-    <body name="trunk_base" pos="0 0 0.1040">
+    <body name="trunk_base" pos="0 0 0.1048">
       <freejoint name="root"/>
       <site name="imu" group="3" pos="0 0 0"/>
-        <geom name="trunk_shell" type="box" size="0.03100 0.02200 0.01700" pos="0.00000 0.00000 0.00000" mass="0.03590" class="viz" rgba="0.95 0.93 0.86 1"/>
+        <geom name="trunk_shell" type="box" size="0.03440 0.02720 0.01775" pos="0.00000 0.00000 0.00000" mass="0.03590" class="viz" rgba="0.95 0.93 0.86 1"/>
       <geom name="battery" type="box" size="0.02250 0.01000 0.00550" pos="0.00000 0.00000 -0.00800" mass="0.02800" class="viz" rgba="0.2 0.3 0.6 1"/>
       <geom name="pcb" type="box" size="0.02000 0.01500 0.00250" pos="0.00000 0.00000 0.00600" mass="0.01200" class="viz" rgba="0.1 0.4 0.2 1"/>
-        <geom name="left_hip_roll_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 0.02000 -0.01100" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="right_hip_roll_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 -0.02000 -0.01100" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="neck_pitch_servo" type="box" size="0.01000 0.01000 0.00420" pos="0.01600 0.00000 0.01200" mass="0.00370" class="viz" rgba="0.15 0.15 0.17 1"/>
+        <geom name="skin_left_shell" type="mesh" mesh="left_shell" class="skin" pos="0.00846 0.00021 -0.03291" quat="0.707107 0.000000 0.000000 0.707107"/>
+        <geom name="skin_right_shell" type="mesh" mesh="right_shell" class="skin" pos="0.00846 -0.00021 -0.03285" quat="0.707107 0.000000 0.000000 0.707107"/>
+        <geom name="left_hip_roll_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 0.02000 -0.01175" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
+        <geom name="right_hip_roll_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 -0.02000 -0.01175" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
+        <geom name="neck_pitch_servo" type="box" size="0.01000 0.01000 0.00420" pos="0.01600 0.00000 0.01275" mass="0.00370" class="viz" rgba="0.15 0.15 0.17 1"/>
 
-      <body name="left_hip" pos="0.00000 0.02000 -0.01700">
+      <body name="left_hip" pos="0.00000 0.02000 -0.01775">
         <joint name="left_hip_roll" axis="1 0 0" range="-0.384 0.384"/>
+        <geom name="skin_hip_yoke_L" type="mesh" mesh="hip_yoke_L" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="left_hip_pitch_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02200" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="left_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00289" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="left_thigh" pos="0.00000 0.00000 -0.02200">
           <joint name="left_hip_pitch" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_thigh_L" type="mesh" mesh="thigh_L" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="left_knee_servo" type="box" size="0.01610 0.01525 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01380" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="left_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00314" class="viz" rgba="0.85 0.72 0.25 1"/>
           <body name="left_shin" pos="0.00000 0.00000 -0.02500">
             <joint name="left_knee" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_shin_L" type="mesh" mesh="shin_L" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="left_ankle_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="left_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00297" class="viz" rgba="0.85 0.72 0.25 1"/>
             <body name="left_foot" pos="0.00000 0.00000 -0.02500">
               <joint name="left_ankle" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_foot_mount_L" type="mesh" mesh="foot_mount_L" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="left_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00137" class="viz" rgba="0.85 0.72 0.25 1"/>
-              <geom name="left_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
+              <geom name="left_sole" type="box" size="0.02025 0.01540 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
+        <geom name="skin_sole_left" type="mesh" mesh="sole_left" class="skin" pos="-0.00825 0.03750 0.00460" quat="0.707107 0.000000 0.000000 -0.707107"/>
               <site name="left_foot" group="3" pos="0.00300 0.00000 -0.01600"/>
             </body>
           </body>
         </body>
       </body>
-      <body name="neck" pos="0.01600 0.00000 0.01700">
+      <body name="neck" pos="0.01600 0.00000 0.00975">
         <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>
+        <geom name="skin_neck_link" type="mesh" mesh="neck_link" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="head_yaw_servo" type="box" size="0.01000 0.01000 0.00420" pos="0.00000 0.00000 0.02000" mass="0.00370" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="neck_link" type="box" size="0.00500 0.00600 0.01000" pos="0.00000 0.00000 0.01000" mass="0.00167" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="head" pos="0.00000 0.00000 0.02000">
           <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>
-        <geom name="head_shell" type="box" size="0.01700 0.01300 0.01200" pos="0.00200 0.00000 0.01200" mass="0.02108" class="viz" rgba="0.95 0.93 0.86 1"/>
-        <geom name="beak" type="box" size="0.01100 0.00650 0.00200" pos="0.02200 0.00000 0.00700" mass="0.00050" class="viz" rgba="0.95 0.65 0.10 1"/>
-          <site name="head_camera" group="3" pos="0.01600 0.00000 0.01600"/>
-          <site name="mouth_tip" group="3" pos="0.03000 0.00000 0.00700"/>
+        <geom name="head_shell" type="box" size="0.03805 0.02845 0.01840" pos="0.00000 0.00000 0.00400" mass="0.02108" class="viz" rgba="0.95 0.93 0.86 1"/>
+        <geom name="skin_bottom_head_shell" type="mesh" mesh="bottom_head_shell" class="skin" pos="-0.00300 0.00000 0.01423" quat="0.000000 0.707107 -0.707107 -0.000000"/>
+        <geom name="skin_top_head_shell" type="mesh" mesh="top_head_shell" class="skin" pos="-0.00300 0.00000 0.01435" quat="0.000000 0.707107 -0.707107 -0.000000"/>
+        <geom name="skin_face_part" type="mesh" mesh="face_part" class="skin" pos="-0.00313 0.00006 0.01435" quat="0.000000 0.707107 -0.707107 -0.000000"/>
+        <geom name="skin_jaw" type="mesh" mesh="jaw" class="skin" pos="-0.00300 0.00000 0.01435" quat="0.000000 0.707107 -0.707107 -0.000000"/>
+        <geom name="skin_noenoeil" type="mesh" mesh="noenoeil" class="skin" pos="-0.00313 0.00006 0.01435" quat="0.000000 0.707107 -0.707107 -0.000000"/>
+          <site name="head_camera" group="3" pos="0.01600 0.00000 0.00800"/>
+          <site name="mouth_tip" group="3" pos="0.03000 0.00000 -0.00100"/>
         </body>
       </body>
-      <body name="right_hip" pos="0.00000 -0.02000 -0.01700">
+      <body name="right_hip" pos="0.00000 -0.02000 -0.01775">
         <joint name="right_hip_roll" axis="1 0 0" range="-0.384 0.384"/>
+        <geom name="skin_hip_yoke_R" type="mesh" mesh="hip_yoke_R" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="right_hip_pitch_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02200" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="right_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00289" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="right_thigh" pos="0.00000 0.00000 -0.02200">
           <joint name="right_hip_pitch" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_thigh_R" type="mesh" mesh="thigh_R" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="right_knee_servo" type="box" size="0.01610 0.01525 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01380" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="right_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00314" class="viz" rgba="0.85 0.72 0.25 1"/>
           <body name="right_shin" pos="0.00000 0.00000 -0.02500">
             <joint name="right_knee" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_shin_R" type="mesh" mesh="shin_R" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="right_ankle_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="right_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00297" class="viz" rgba="0.85 0.72 0.25 1"/>
             <body name="right_foot" pos="0.00000 0.00000 -0.02500">
               <joint name="right_ankle" axis="0 1 0" range="-1.571 1.571"/>
+        <geom name="skin_foot_mount_R" type="mesh" mesh="foot_mount_R" class="skin" rgba="0.22 0.22 0.24 1"/>
         <geom name="right_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00137" class="viz" rgba="0.85 0.72 0.25 1"/>
-              <geom name="right_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
+              <geom name="right_sole" type="box" size="0.02025 0.01540 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
+        <geom name="skin_sole_right" type="mesh" mesh="sole_right" class="skin" pos="0.01425 0.03750 0.00460" quat="0.707107 0.000000 0.000000 0.707107"/>
               <site name="right_foot" group="3" pos="0.00300 0.00000 -0.01600"/>
             </body>
           </body>
