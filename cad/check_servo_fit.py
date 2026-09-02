@@ -96,16 +96,45 @@ def main() -> None:
           % (TORQUE_CEILING, TORQUE_CEILING * HEIGHT_MM))
 
     print("Ways out, cheapest first:")
-    print("  1. FEWER DOF.  The 23.7 mm head cluster (pitch+yaw+roll) and the hip yaw")
-    print("     exist for expressiveness, not for walking.  14 -> 10 or 11 DOF frees")
-    print("     exactly the tightest chains.  Retraining is already mandatory, so the")
-    print("     14-action contract is not a reason to keep them.")
-    print("  2. MIXED SERVO SIZES.  Head joints need <=0.10 Nm where the knee needs")
-    print("     0.49 Nm (see analysis output).  Put 3.7 g micro servos in the head and")
-    print("     neck and keep MG90S for the legs.")
-    print("  3. REMOTE ACTUATION.  Move knee/ankle servos into the trunk and drive")
+    print("  1. TURN THE SERVO SIDEWAYS.  <- this is the one NanoDuck v2 uses")
+    print("  2. FEWER DOF.  The 24.6 mm head cluster (pitch+yaw+roll) and the hip yaw")
+    print("     exist for expressiveness, not for walking.  14 -> 10 DOF frees exactly")
+    print("     the tightest chains.  Retraining is already mandatory, so the 14-action")
+    print("     contract is not a reason to keep them.")
+    print("  3. MIXED SERVO SIZES.  Head joints need <=0.10 Nm where the knee needs")
+    print("     0.49 Nm.  Put 3.7 g micro servos in the head and keep MG90S in the legs.")
+    print("  4. REMOTE ACTUATION.  Move knee/ankle servos into the trunk and drive")
     print("     through linkages, as most sub-200 mm bipeds do.  Frees the leg volume")
     print("     entirely, at the cost of added backlash -- which the sim already models.")
+    print()
+
+    print("=" * 74)
+    print("1. TURN THE SERVO SIDEWAYS")
+    print("=" * 74)
+    print("The 32.2 mm figure above assumes the servo lies ALONG the chain, which is")
+    print("how MicroDuck mounts an XL330 -- reasonable, because an XL330 is 20 mm on")
+    print("its thinnest axis and gains little from being turned.")
+    print()
+    print("An MG90S is 12.2 mm thin, and its output shaft comes out of the 22.8 x 12.2")
+    print("face, i.e. along the 28.5 mm axis.  For a PITCH joint the shaft axis has to")
+    print("run left-right anyway, which leaves the 32.2 and 12.2 dimensions free to sit")
+    print("in the sagittal plane.  Put the 12.2 along the leg and the servo body sticks")
+    print("out fore-aft instead of eating chain length:")
+    print()
+    for label, along in (("servo along the chain", MG90S_LEN_MM),
+                         ("servo across the chain", 12.2)):
+        need = along + 8.0     # + bracket and bearing at the joint
+        print("   %-24s %5.1f mm of chain per servo (incl. 8 mm bracket)"
+              % (label, need))
+    print()
+    thigh = 35.0               # NanoDuck v2, from analysis/design_point.py
+    print("NanoDuck v2 uses 35 mm thigh and 35 mm shin, one servo each:")
+    print("   packing ratio = %.1f / %.1f = %.2f   (MicroDuck lives at 1.44)"
+          % (12.2 + 8.0, thigh, (12.2 + 8.0) / thigh))
+    print()
+    print("The blocker is gone, and it cost nothing but a mounting orientation.")
+    print("Price: the thighs stick out ~32 mm fore-aft.  On a duck that reads as")
+    print("drumsticks, so the constraint and the character agree for once.")
 
 
 if __name__ == "__main__":
