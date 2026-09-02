@@ -81,14 +81,26 @@ HEAD_Z = 12.0
 BEAK = (22.0, 13.0, 4.0)       # flat and forward, the one unmistakably duck part
 
 # --- Masses [kg] not accounted for by a servo box -----------------------------
+# These are no longer estimates.  cad/parts.py generates the real printed parts
+# and reports their volume; these are those volumes at PETG density and 35%
+# infill (cosmetic shells are thin-walled CAD and print near solid, so they are
+# counted at 90%).  Run `python parts.py --check` to regenerate the numbers.
+#
+# The round-number guesses this replaced were badly optimistic: 33 g of
+# structure became 65 g once the geometry existed, mostly because MicroDuck's
+# shells are bigger relative to a 162 mm robot than they look.
 M_BATTERY = 0.028
 M_PCB = 0.012
 M_WIRING = 0.008
-M_SHELL = 0.010                 # printed trunk shell
-M_BRACKET = 0.0015              # per joint: bracket + idler bearing + screws
-M_FOOT = 0.0035
-M_HEAD_SHELL = 0.003
-M_NECK_BRACKET = 0.0005
+M_CHASSIS = 0.012               # trunk frame -- still an estimate, not yet drawn
+M_TRUNK_SHELL = 0.0159          # cosmetic left_shell + right_shell at 0.85
+M_HIP_YOKE = 0.00289
+M_THIGH = 0.00314
+M_SHIN = 0.00297
+M_FOOT_MOUNT = 0.00137
+M_SOLE = 0.00301                # cosmetic sole at 0.75
+M_HEAD = 0.02108                # top + bottom shell + face + jaw + 2 eyes at 0.62
+M_NECK_LINK = 0.00167
 
 # --- Home pose [rad] ----------------------------------------------------------
 # A symmetric crouch, derived rather than copied.  For a two-link leg with equal
@@ -121,18 +133,30 @@ KNEE_0 = -2.0 * HIP_PITCH_0     # -22.9 deg, keeps the ankle under the hip
 ANKLE_0 = HIP_PITCH_0           # levels the sole
 NECK_PITCH_0 = 0.35             # leans the neck forward: a duck, not a meerkat
 
+# Leg pitch limits are MEASURED, not chosen: cad/parts.py sweeps each printed
+# joint and finds where the child's yoke fouls the parent's carrier
+# (`python parts.py --check`). They are asymmetric because the servo case
+# sticks out one way -- the drumstick -- and the knee's carrier is mirrored so
+# its wide side faces the direction the knee actually bends.
+#
+# The ankle is the tight one at 32 deg of total travel, and it is the clearest
+# thing to fix next in the mechanics.
+HIP_PITCH_RANGE = (-0.567, 1.745)     # -32.5 .. +100.0 deg
+KNEE_RANGE = (-1.789, 0.567)          # -102.5 .. +32.5 deg
+ANKLE_RANGE = (-0.175, 0.393)         # -10.0 .. +22.5 deg
+
 JOINTS = [
-    # name,             servo,   range (rad),          home
+    # name,             servo,   range (rad),      home
     ("left_hip_roll",   "MG90S", (-0.384, 0.384), -HIP_ROLL_0),
-    ("left_hip_pitch",  "MG90S", (-1.571, 1.571), HIP_PITCH_0),
-    ("left_knee",       "MG92B", (-1.571, 1.571), KNEE_0),
-    ("left_ankle",      "MG90S", (-1.571, 1.571), ANKLE_0),
+    ("left_hip_pitch",  "MG90S", HIP_PITCH_RANGE, HIP_PITCH_0),
+    ("left_knee",       "MG92B", KNEE_RANGE,      KNEE_0),
+    ("left_ankle",      "MG90S", ANKLE_RANGE,     ANKLE_0),
     ("neck_pitch",      "micro", (-1.571, 1.047), NECK_PITCH_0),
     ("head_yaw",        "micro", (-2.967, 2.967), 0.0),
     ("right_hip_roll",  "MG90S", (-0.384, 0.384), HIP_ROLL_0),
-    ("right_hip_pitch", "MG90S", (-1.571, 1.571), HIP_PITCH_0),
-    ("right_knee",      "MG92B", (-1.571, 1.571), KNEE_0),
-    ("right_ankle",     "MG90S", (-1.571, 1.571), ANKLE_0),
+    ("right_hip_pitch", "MG90S", HIP_PITCH_RANGE, HIP_PITCH_0),
+    ("right_knee",      "MG92B", KNEE_RANGE,      KNEE_0),
+    ("right_ankle",     "MG90S", ANKLE_RANGE,     ANKLE_0),
 ]
 
 
@@ -169,28 +193,28 @@ def leg(side, sign):
     # The hip_pitch servo rides on the roll link, at the pitch axis.
     a(servo_geom("%s_hip_pitch_servo" % side, "MG90S", (-6, 0, -HIP_ROLL_TO_PITCH)))
     a(link_geom("%s_hip_bracket" % side, (14, 20, HIP_ROLL_TO_PITCH),
-                (0, 0, -HIP_ROLL_TO_PITCH / 2), M_BRACKET))
+                (0, 0, -HIP_ROLL_TO_PITCH / 2), M_HIP_YOKE))
 
     a('        <body name="%s_thigh" pos="%s">\n' % (side, m(0, 0, -HIP_ROLL_TO_PITCH)))
     a('          <joint name="%s_hip_pitch" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
     a(servo_geom("%s_knee_servo" % side, "MG92B", (-6, 0, -THIGH)))
-    a(link_geom("%s_thigh_link" % side, (12, 16, THIGH), (0, 0, -THIGH / 2), M_BRACKET))
+    a(link_geom("%s_thigh_link" % side, (12, 16, THIGH), (0, 0, -THIGH / 2), M_THIGH))
 
     a('          <body name="%s_shin" pos="%s">\n' % (side, m(0, 0, -THIGH)))
     a('            <joint name="%s_knee" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
     a(servo_geom("%s_ankle_servo" % side, "MG90S", (-6, 0, -SHIN)))
-    a(link_geom("%s_shin_link" % side, (10, 14, SHIN), (0, 0, -SHIN / 2), M_BRACKET))
+    a(link_geom("%s_shin_link" % side, (10, 14, SHIN), (0, 0, -SHIN / 2), M_SHIN))
 
     a('            <body name="%s_foot" pos="%s">\n' % (side, m(0, 0, -SHIN)))
     a('              <joint name="%s_ankle" axis="0 1 0" range="%.3f %.3f"/>\n'
       % (side, -1.571, 1.571))
     a(link_geom("%s_ankle_bracket" % side, (12, 16, ANKLE_TO_SOLE),
-                (0, 0, -ANKLE_TO_SOLE / 2), M_BRACKET))
+                (0, 0, -ANKLE_TO_SOLE / 2), M_FOOT_MOUNT))
     a('              <geom name="%s_sole" type="box" size="%s" pos="%s" mass="%.5f" '
       'class="collision" rgba="0.95 0.55 0.10 1"/>\n'
-      % (side, half(FOOT), m(FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2] / 2), M_FOOT))
+      % (side, half(FOOT), m(FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2] / 2), M_SOLE))
     a('              <site name="%s_foot" group="3" pos="%s"/>\n'
       % (side, m(FOOT_X, 0, -ANKLE_TO_SOLE - FOOT[2])))
     a('            </body>\n')
@@ -226,7 +250,8 @@ def build_robot() -> str:
     a('      <freejoint name="root"/>\n')
     a('      <site name="imu" group="3" pos="0 0 0"/>\n')
     # Trunk contents. Battery low and central; PCB above it.
-    a(link_geom("trunk_shell", TRUNK, (0, 0, 0), M_SHELL + M_WIRING, "0.95 0.93 0.86 1"))
+    a(link_geom("trunk_shell", TRUNK, (0, 0, 0),
+                M_CHASSIS + M_TRUNK_SHELL + M_WIRING, "0.95 0.93 0.86 1"))
     a('      <geom name="battery" type="box" size="%s" pos="%s" mass="%.5f" class="viz" '
       'rgba="0.2 0.3 0.6 1"/>\n' % (half((45, 20, 11)), m(0, 0, -8), M_BATTERY))
     a('      <geom name="pcb" type="box" size="%s" pos="%s" mass="%.5f" class="viz" '
@@ -245,10 +270,10 @@ def build_robot() -> str:
     a('      <body name="neck" pos="%s">\n' % m(NECK_X, 0, TRUNK[2] / 2))
     a('        <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>\n')
     a(servo_geom("head_yaw_servo", "micro", (0, 0, NECK_LEN)))
-    a(link_geom("neck_link", (10, 12, NECK_LEN), (0, 0, NECK_LEN / 2), M_NECK_BRACKET))
+    a(link_geom("neck_link", (10, 12, NECK_LEN), (0, 0, NECK_LEN / 2), M_NECK_LINK))
     a('        <body name="head" pos="%s">\n' % m(0, 0, NECK_LEN))
     a('          <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>\n')
-    a(link_geom("head_shell", HEAD, (2, 0, HEAD_Z), M_HEAD_SHELL, "0.95 0.93 0.86 1"))
+    a(link_geom("head_shell", HEAD, (2, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
     a(link_geom("beak", BEAK, (22, 0, HEAD_Z - 5), 0.0005, "0.95 0.65 0.10 1"))
     a('          <site name="head_camera" group="3" pos="%s"/>\n' % m(16, 0, HEAD_Z + 4))
     a('          <site name="mouth_tip" group="3" pos="%s"/>\n' % m(30, 0, HEAD_Z - 5))

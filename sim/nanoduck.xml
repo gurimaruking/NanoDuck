@@ -21,7 +21,7 @@
     <body name="trunk_base" pos="0 0 0.1040">
       <freejoint name="root"/>
       <site name="imu" group="3" pos="0 0 0"/>
-        <geom name="trunk_shell" type="box" size="0.03100 0.02200 0.01700" pos="0.00000 0.00000 0.00000" mass="0.01800" class="viz" rgba="0.95 0.93 0.86 1"/>
+        <geom name="trunk_shell" type="box" size="0.03100 0.02200 0.01700" pos="0.00000 0.00000 0.00000" mass="0.03590" class="viz" rgba="0.95 0.93 0.86 1"/>
       <geom name="battery" type="box" size="0.02250 0.01000 0.00550" pos="0.00000 0.00000 -0.00800" mass="0.02800" class="viz" rgba="0.2 0.3 0.6 1"/>
       <geom name="pcb" type="box" size="0.02000 0.01500 0.00250" pos="0.00000 0.00000 0.00600" mass="0.01200" class="viz" rgba="0.1 0.4 0.2 1"/>
         <geom name="left_hip_roll_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 0.02000 -0.01100" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
@@ -31,19 +31,19 @@
       <body name="left_hip" pos="0.00000 0.02000 -0.01700">
         <joint name="left_hip_roll" axis="1 0 0" range="-0.384 0.384"/>
         <geom name="left_hip_pitch_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02200" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="left_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="left_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00289" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="left_thigh" pos="0.00000 0.00000 -0.02200">
           <joint name="left_hip_pitch" axis="0 1 0" range="-1.571 1.571"/>
         <geom name="left_knee_servo" type="box" size="0.01610 0.01525 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01380" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="left_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="left_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00314" class="viz" rgba="0.85 0.72 0.25 1"/>
           <body name="left_shin" pos="0.00000 0.00000 -0.02500">
             <joint name="left_knee" axis="0 1 0" range="-1.571 1.571"/>
         <geom name="left_ankle_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="left_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="left_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00297" class="viz" rgba="0.85 0.72 0.25 1"/>
             <body name="left_foot" pos="0.00000 0.00000 -0.02500">
               <joint name="left_ankle" axis="0 1 0" range="-1.571 1.571"/>
-        <geom name="left_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
-              <geom name="left_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00350" class="collision" rgba="0.95 0.55 0.10 1"/>
+        <geom name="left_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00137" class="viz" rgba="0.85 0.72 0.25 1"/>
+              <geom name="left_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
               <site name="left_foot" group="3" pos="0.00300 0.00000 -0.01600"/>
             </body>
           </body>
@@ -52,10 +52,10 @@
       <body name="neck" pos="0.01600 0.00000 0.01700">
         <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>
         <geom name="head_yaw_servo" type="box" size="0.01000 0.01000 0.00420" pos="0.00000 0.00000 0.02000" mass="0.00370" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="neck_link" type="box" size="0.00500 0.00600 0.01000" pos="0.00000 0.00000 0.01000" mass="0.00050" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="neck_link" type="box" size="0.00500 0.00600 0.01000" pos="0.00000 0.00000 0.01000" mass="0.00167" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="head" pos="0.00000 0.00000 0.02000">
           <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>
-        <geom name="head_shell" type="box" size="0.01700 0.01300 0.01200" pos="0.00200 0.00000 0.01200" mass="0.00300" class="viz" rgba="0.95 0.93 0.86 1"/>
+        <geom name="head_shell" type="box" size="0.01700 0.01300 0.01200" pos="0.00200 0.00000 0.01200" mass="0.02108" class="viz" rgba="0.95 0.93 0.86 1"/>
         <geom name="beak" type="box" size="0.01100 0.00650 0.00200" pos="0.02200 0.00000 0.00700" mass="0.00050" class="viz" rgba="0.95 0.65 0.10 1"/>
           <site name="head_camera" group="3" pos="0.01600 0.00000 0.01600"/>
           <site name="mouth_tip" group="3" pos="0.03000 0.00000 0.00700"/>
@@ -64,19 +64,19 @@
       <body name="right_hip" pos="0.00000 -0.02000 -0.01700">
         <joint name="right_hip_roll" axis="1 0 0" range="-0.384 0.384"/>
         <geom name="right_hip_pitch_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02200" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="right_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="right_hip_bracket" type="box" size="0.00700 0.01000 0.01100" pos="0.00000 0.00000 -0.01100" mass="0.00289" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="right_thigh" pos="0.00000 0.00000 -0.02200">
           <joint name="right_hip_pitch" axis="0 1 0" range="-1.571 1.571"/>
         <geom name="right_knee_servo" type="box" size="0.01610 0.01525 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01380" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="right_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="right_thigh_link" type="box" size="0.00600 0.00800 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00314" class="viz" rgba="0.85 0.72 0.25 1"/>
           <body name="right_shin" pos="0.00000 0.00000 -0.02500">
             <joint name="right_knee" axis="0 1 0" range="-1.571 1.571"/>
         <geom name="right_ankle_servo" type="box" size="0.01610 0.01425 0.00610" pos="-0.00600 0.00000 -0.02500" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
-        <geom name="right_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
+        <geom name="right_shin_link" type="box" size="0.00500 0.00700 0.01250" pos="0.00000 0.00000 -0.01250" mass="0.00297" class="viz" rgba="0.85 0.72 0.25 1"/>
             <body name="right_foot" pos="0.00000 0.00000 -0.02500">
               <joint name="right_ankle" axis="0 1 0" range="-1.571 1.571"/>
-        <geom name="right_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00150" class="viz" rgba="0.85 0.72 0.25 1"/>
-              <geom name="right_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00350" class="collision" rgba="0.95 0.55 0.10 1"/>
+        <geom name="right_ankle_bracket" type="box" size="0.00600 0.00800 0.00600" pos="0.00000 0.00000 -0.00600" mass="0.00137" class="viz" rgba="0.85 0.72 0.25 1"/>
+              <geom name="right_sole" type="box" size="0.02100 0.01300 0.00200" pos="0.00300 0.00000 -0.01400" mass="0.00301" class="collision" rgba="0.95 0.55 0.10 1"/>
               <site name="right_foot" group="3" pos="0.00300 0.00000 -0.01600"/>
             </body>
           </body>
@@ -87,15 +87,15 @@
 
   <actuator>
     <position name="left_hip_roll" joint="left_hip_roll" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.384 0.384"/>
-    <position name="left_hip_pitch" joint="left_hip_pitch" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-1.571 1.571"/>
-    <position name="left_knee" joint="left_knee" kp="3.550" kv="0" forcerange="-0.310 0.310" ctrlrange="-1.571 1.571"/>
-    <position name="left_ankle" joint="left_ankle" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-1.571 1.571"/>
+    <position name="left_hip_pitch" joint="left_hip_pitch" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.567 1.745"/>
+    <position name="left_knee" joint="left_knee" kp="3.550" kv="0" forcerange="-0.310 0.310" ctrlrange="-1.789 0.567"/>
+    <position name="left_ankle" joint="left_ankle" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.175 0.393"/>
     <position name="neck_pitch" joint="neck_pitch" kp="0.690" kv="0" forcerange="-0.060 0.060" ctrlrange="-1.571 1.047"/>
     <position name="head_yaw" joint="head_yaw" kp="0.690" kv="0" forcerange="-0.060 0.060" ctrlrange="-2.967 2.967"/>
     <position name="right_hip_roll" joint="right_hip_roll" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.384 0.384"/>
-    <position name="right_hip_pitch" joint="right_hip_pitch" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-1.571 1.571"/>
-    <position name="right_knee" joint="right_knee" kp="3.550" kv="0" forcerange="-0.310 0.310" ctrlrange="-1.571 1.571"/>
-    <position name="right_ankle" joint="right_ankle" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-1.571 1.571"/>
+    <position name="right_hip_pitch" joint="right_hip_pitch" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.567 1.745"/>
+    <position name="right_knee" joint="right_knee" kp="3.550" kv="0" forcerange="-0.310 0.310" ctrlrange="-1.789 0.567"/>
+    <position name="right_ankle" joint="right_ankle" kp="2.480" kv="0" forcerange="-0.216 0.216" ctrlrange="-0.175 0.393"/>
   </actuator>
 
   <sensor>

@@ -114,9 +114,11 @@ ASSIGN = {
 ALL_MG90S = {j: ("micro3.7g" if s == "micro3.7g" else "MG90S@6V") for j, s in ASSIGN.items()}
 
 LEG_MM = 50.0     # thigh 25 + shin 25; see cad/build_nanoduck.py
-# Itemised to match sim/nanoduck.xml exactly -- the model is the authority on
-# mass now, because building the geometry turned up brackets the round number
-# missed (8 joint brackets, not the 6 the first estimate assumed).
+# Printed masses are now MEASURED, not estimated: cad/parts.py generates the
+# real parts and reports their volume, and these are those volumes at PETG
+# density and 35% infill (cosmetic shells count at 90%, being thin-wall CAD).
+# The round numbers this replaced were badly optimistic -- 33 g of structure
+# turned into 65 g the moment the geometry existed.
 BOM = [
     ("MG90S x6 (hip roll/pitch, ankles)", 6 * 0.0134),
     ("MG92B x2 (knees)", 2 * 0.0138),
@@ -124,10 +126,12 @@ BOM = [
     ("2S 450 mAh LiHV", 0.028),
     ("control PCB (ESP32-S3-MINI + driver + ADC + BEC)", 0.012),
     ("wiring", 0.008),
-    ("trunk shell", 0.010),
-    ("joint brackets + idler bearings + screws, x8", 8 * 0.0015),
-    ("feet x2", 2 * 0.0035),
-    ("neck bracket, head shell, beak", 0.0005 + 0.003 + 0.0005),
+    ("trunk chassis (estimate -- not yet drawn)", 0.012),
+    ("printed leg structure x2 (yoke, thigh, shin, foot)", 2 * 0.01037),
+    ("printed neck link", 0.00167),
+    ("cosmetic head: shells, face, jaw, eyes (MicroDuck at 0.62)", 0.02108),
+    ("cosmetic body panels (MicroDuck at 0.85)", 0.0159),
+    ("cosmetic soles x2 (MicroDuck at 0.75)", 2 * 0.00301),
 ]
 
 
