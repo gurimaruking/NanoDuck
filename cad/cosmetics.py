@@ -235,18 +235,24 @@ if __name__ == "__main__":
 # part that gets printed.  parts.py builds those in the LINK frame -- origin on
 # the driven joint axis, link along -Z -- which is exactly the MJCF body frame,
 # so they drop in with no transform at all.
+# body -> (parts, quat) . The hip and neck turn a corner, so they are two
+# bolted parts each (cad/parts.corner_link). The hip assembly is also rotated
+# when it is placed: the part is built with its driven axis on the part frame's
+# Y, and hip_roll is X, so it goes in turned -90 deg about Z.
 PRINTED = {
-    "left_hip": "hip_yoke_L", "right_hip": "hip_yoke_R",
-    "left_thigh": "thigh_L", "right_thigh": "thigh_R",
-    "left_shin": "shin_L", "right_shin": "shin_R",
-    "left_foot": "foot_mount_L", "right_foot": "foot_mount_R",
-    "neck": "neck_link",
+    "left_hip": (["hip_yoke_a_L", "hip_yoke_b_L"], (0.707107, 0, 0, -0.707107)),
+    "right_hip": (["hip_yoke_a_R", "hip_yoke_b_R"], (0.707107, 0, 0, -0.707107)),
+    "left_thigh": (["thigh_L"], None), "right_thigh": (["thigh_R"], None),
+    "left_shin": (["shin_L"], None), "right_shin": (["shin_R"], None),
+    "left_foot": (["foot_mount_L"], None), "right_foot": (["foot_mount_R"], None),
+    "neck": (["neck_link_a", "neck_link_b"], None),
 }
 
 
 def printed_assets():
     seen, out = set(), []
-    for part in PRINTED.values():
+    for parts, _ in PRINTED.values():
+      for part in parts:
         if part in seen:
             continue
         seen.add(part)
@@ -260,8 +266,18 @@ def printed_assets():
 
 
 def printed_geom(body):
-    part = PRINTED.get(body)
-    if part is None:
+    """Visual geoms for the printed parts on one body.
+
+    A body can carry more than one part: the hip and the neck each turn a 90
+    degree corner and are split across a bolted plate, because a carrier
+    twisted inside a single part sweeps into its own yoke arms
+    (cad/parts.corner_link).
+    """
+    entry = PRINTED.get(body)
+    if entry is None:
         return ""
-    return ('        <geom name="skin_%s" type="mesh" mesh="%s" class="skin" '
-            'rgba="0.22 0.22 0.24 1"/>\n' % (part, part))
+    parts, quat = entry
+    q = "" if quat is None else ' quat="%s"' % " ".join("%.6f" % v for v in quat)
+    return "".join(
+        '        <geom name="skin_%s" type="mesh" mesh="%s" class="skin"%s '
+        'rgba="0.22 0.22 0.24 1"/>\n' % (part, part, q) for part in parts)

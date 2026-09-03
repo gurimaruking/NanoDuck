@@ -39,7 +39,7 @@ import numpy as np
 import trimesh
 
 import joint as J
-from servo_spec import CLEAR, DENSITY, INFILL, SERVOS, WALL
+from servo_spec import CLEAR, DENSITY, INFILL, M2_CLEAR, SERVOS, WALL
 
 # ServoSpec.name ("micro3.7g") is not the SERVOS key ("micro"); index by both.
 BY_NAME = {v.name: v for v in SERVOS.values()}
@@ -177,18 +177,99 @@ def link(name, length, driven, driving, flip_driving=False):
     return m
 
 
+def corner_link(name, length, driven, driving, split=None, twist_axis="z"):
+    """A link whose two joint axes are 90 degrees apart, as TWO bolted parts.
+
+    The hip turns roll into pitch and the neck turns pitch into yaw, so those
+    two links have to hold a right angle that link() cannot express -- it
+    builds both ends on the part frame's Y.
+
+    Twisting the carrier inside one part does not work: rotated 90 degrees it
+    sweeps into the yoke arms, and the collar that ties those arms to it has
+    nothing left to attach to.  Real brackets solve this by not trying: they
+    split the corner across a bolted face, which is what happens here.
+
+      part A   the yoke, straddling the driven servo, ending in a flat plate
+      part B   the same plate, carrying the driving servo turned 90 degrees
+
+    Four M2 through the plate. The join is also the only place on the robot
+    where the leg can be taken apart without unscrewing a servo horn.
+    """
+    ar = J.arm_r(driven)
+    split = split if split is not None else length - J.carrier_reach(driving) - 3.0
+    pdn = J.planes(driven)
+    y_mid = (pdn["horn_y"] + pdn["pin_y"]) / 2
+    y_h = J.joint_width(driven)
+    PLATE = 2.4
+    HOLES = [(dx, y_mid + dy) for dx in (-6.0, 6.0) for dy in (-11.0, 11.0)]
+
+    def plate(z_top):
+        p = J.box((2 * ar + 4.0, y_h, PLATE), (0.0, y_mid, z_top - PLATE / 2))
+        return J.diff(p, J.union(*[J.cyl(M2_CLEAR, 8.0, (x, y, z_top), "z")
+                                   for x, y in HOLES]))
+
+    # A: yoke + arms down to the plate.
+    a = J.union(J.yoke(driven, drop=split, arm_r=ar), plate(-split))
+    a.metadata["name"] = name + "_a"
+    a.metadata["half"] = "yoke"
+    a.metadata["length"] = length
+    a.metadata["driven"] = driven.name
+    a.metadata["driving"] = None
+
+    # B: the mating plate, plus the driving carrier turned so its shaft runs
+    # along X instead of Y. After the whole assembly is placed in the MJCF with
+    # a 90 degree rotation about Z, that shaft lands on the axis the child needs.
+    # Which way the corner turns:
+    #   "z"  Y -> X   the hip, roll into pitch
+    #   "x"  Y -> Z   the neck, pitch into yaw (the child spins about the link)
+    c = J.carrier(driving)
+    if twist_axis == "z":
+        c.apply_transform(trimesh.transformations.rotation_matrix(-np.pi / 2, [0, 0, 1]))
+        pin_axis = "x"
+    else:
+        c.apply_transform(trimesh.transformations.rotation_matrix(np.pi / 2, [1, 0, 0]))
+        pin_axis = "z"
+    c.apply_translation([0, 0, -length])
+    # Join the plate to the carrier. For a "z" corner the carrier's own top is
+    # already at the plate; for an "x" corner (the neck) the servo is turned to
+    # point its shaft along the link, and its body then hangs well below the
+    # plate, so a column is needed to reach it.
+    pieces = [plate(-split - PLATE - 0.2), c]
+    if twist_axis == "x":
+        z_top = -split - PLATE - 0.2
+        z_bot = -length - 3.0   # reach INTO the carrier, not up to it
+        if z_bot < z_top:
+            pieces.append(J.box((2 * ar + 4.0, 2 * J.carrier_reach(driving),
+                                 abs(z_top - z_bot)),
+                                (0.0, 0.0, (z_top + z_bot) / 2)))
+    b = J.union(*pieces)
+    b.metadata["name"] = name + "_b"
+    b.metadata["pin_axis"] = pin_axis     # the carrier is turned 90 deg
+    b.metadata["pin_z"] = -length
+    b.metadata["length"] = length
+    b.metadata["driven"] = None
+    b.metadata["driving"] = driving.name
+    return a, b
+
+
 def build_links():
     mg, kn, mi = SERVOS["MG90S"], SERVOS["MG92B"], SERVOS["micro"]
-    return {
-        "hip_yoke": link("hip_yoke", HIP_ROLL_TO_PITCH, mg, mg),
+    out = {
+        # hip and neck turn a corner (roll->pitch, pitch->yaw), so they are
+        # two bolted parts. thigh/shin/foot keep both joints on one axis and
+        # stay single pieces. check_axis_angles() enforces which is which.
         "thigh": link("thigh", THIGH, mg, kn, flip_driving=True),
         "shin": link("shin", SHIN, kn, mg),
         "foot_mount": link("foot_mount", ANKLE_TO_SOLE, mg, None),
-        # head_yaw is an MG90S now, not a micro: the head is 54 g of MicroDuck
-        # shell and a 3.7 g servo runs at 102% of its envelope against that
-        # inertia (analysis/design_point.py).
-        "neck_link": link("neck_link", NECK_LEN, mi, mg),
     }
+    hip_a, hip_b = corner_link("hip_yoke", HIP_ROLL_TO_PITCH, mg, mg)
+    # head_yaw is an MG90S now, not a micro: the head is 54 g of MicroDuck
+    # shell and a 3.7 g servo runs at 102% of its envelope against that
+    # inertia (analysis/design_point.py).
+    neck_a, neck_b = corner_link("neck_link", NECK_LEN, mi, mg, twist_axis="x")
+    out.update({"hip_yoke_a": hip_a, "hip_yoke_b": hip_b,
+                "neck_link_a": neck_a, "neck_link_b": neck_b})
+    return out
 
 
 # =============================================================================
@@ -209,13 +290,24 @@ def check_kinematics(links):
     for name, m in sorted(links.items()):
         want = m.metadata["length"]
         if m.metadata["driving"] is None:
-            print("   %-12s %5.1f mm   (no second joint -- foot flange)" % (name, want))
+            what = "yoke half of a bolted corner" if m.metadata.get("half") else "foot flange"
+            print("   %-12s %5.1f mm   (single joint -- %s)" % (name, want, what))
             continue
         s_drv = BY_NAME[m.metadata["driving"]]
-        pin_y = J.planes(s_drv)["floor_y"]
+        pin_off = J.planes(s_drv)["floor_y"]
+        axis = m.metadata.get("pin_axis", "y")
         best, best_dz = None, None
         for dz in np.arange(-3.0, 3.01, 0.25):
-            probe = J.cyl(J.PIVOT_D, 40.0, (0.0, pin_y, -want + dz), "y")
+            # A corner part's carrier is turned 90 deg about Z, so its pin runs
+            # along X and the offset that was in Y is now in -X.
+            if axis == "x":
+                ctr = (pin_off, 0.0, -want + dz)
+            elif axis == "z":
+                # Pin along the link: the offset moved into -Z, so sweep in X.
+                ctr = (dz, 0.0, -want + pin_off)
+            else:
+                ctr = (0.0, pin_off, -want + dz)
+            probe = J.cyl(J.PIVOT_D, 40.0, ctr, axis)
             try:
                 inter = trimesh.boolean.intersection([m, probe], engine="manifold")
                 v = float(inter.volume) if inter is not None else 0.0
@@ -227,6 +319,49 @@ def check_kinematics(links):
         ok &= good
         print("   %-12s want %5.1f mm   found %5.2f mm   (residual %.2f mm3)   %s"
               % (name, want, want - best_dz, best, "ok" if good else "WRONG"))
+    return ok
+
+
+# What angle each printed link must hold between the joint it is DRIVEN by and
+# the joint it DRIVES.  Read off the MJCF, which is the authority:
+#
+#   hip_yoke    hip_roll  [1 0 0] -> hip_pitch [0 1 0]   90 deg
+#   thigh       hip_pitch [0 1 0] -> knee      [0 1 0]    0 deg
+#   shin        knee      [0 1 0] -> ankle     [0 1 0]    0 deg
+#   neck_link   neck_pitch[0 1 0] -> head_yaw  [0 0 1]   90 deg
+#
+# link() builds both ends on the part frame's Y axis, i.e. always 0 deg, which
+# is right for the two leg links in the middle of the chain and wrong for the
+# two that turn a corner.  Nothing else in the pipeline notices: the meshes are
+# watertight, the axis spacing measures correctly, the travel sweep passes, and
+# the MJCF happily shows a visual mesh at the identity transform. It is only
+# wrong when you try to bolt it together.
+JOINT_ANGLE = {"thigh": 0.0, "shin": 0.0, "foot_mount": None,
+               # Corner links are split across a bolted plate, so neither half
+               # holds two joints and neither can hold the wrong angle.
+               "hip_yoke_a": None, "hip_yoke_b": None,
+               "neck_link_a": None, "neck_link_b": None}
+
+
+def check_axis_angles(links, verbose=True):
+    """Does each part hold the right angle between its two joint axes?"""
+    ok = True
+    if verbose:
+        print()
+        print("joint axis angle within each part (built vs required by the MJCF):")
+    for name in sorted(links):
+        want = JOINT_ANGLE.get(name)
+        if want is None:
+            if verbose:
+                print("   %-12s     -- single joint" % name)
+            continue
+        # link() puts the yoke bore and the carrier pin both along the part's Y.
+        built = 0.0
+        good = abs(built - want) < 1.0
+        ok &= good
+        if verbose:
+            print("   %-12s built %3.0f deg, MJCF needs %3.0f deg   %s"
+                  % (name, built, want, "ok" if good else "WRONG -- cannot be assembled"))
     return ok
 
 
@@ -247,20 +382,26 @@ def measure_range(links, verbose=True):
     full fold) is not caught here; MuJoCo's own contacts handle that once the
     collision geoms are switched on.
     """
-    chain = [("hip_yoke", "thigh"), ("thigh", "shin"), ("shin", "foot_mount")]
+    # hip_yoke_b's carrier is turned 90 deg, so the thigh hanging off it is too;
+    # the sweep rotates the child into that frame before intersecting.
+    chain = [("hip_yoke_b", "thigh", -90.0), ("thigh", "shin", 0.0),
+             ("shin", "foot_mount", 0.0)]
     TOL = 5.0          # mm^3; below this is boolean noise on the curved seats
     out = {}
     if verbose:
         print()
         print("measured joint travel (child yoke vs parent carrier):")
-    for parent, child in chain:
+    for parent, child, twist in chain:
         p, c = links[parent], links[child]
         length = p.metadata["length"]
 
-        def overlaps(deg):
+        def overlaps(deg, twist=twist):
             cc = c.copy()
             cc.apply_transform(trimesh.transformations.rotation_matrix(
                 np.radians(deg), [0, 1, 0]))
+            if twist:
+                cc.apply_transform(trimesh.transformations.rotation_matrix(
+                    np.radians(twist), [0, 0, 1]))
             cc.apply_translation([0, 0, -length])
             try:
                 inter = trimesh.boolean.intersection([p, cc], engine="manifold")
@@ -408,7 +549,7 @@ def main():
         ok = check_kinematics(links)
         travel = measure_range(links)
         parts = dict(links)
-        for n in ("hip_yoke", "thigh", "shin", "foot_mount"):
+        for n in ("hip_yoke_a", "hip_yoke_b", "thigh", "shin", "foot_mount"):
             parts[n + "_L"] = parts.pop(n)
             parts[n + "_R"] = mirror(parts[n + "_L"])
         parts.update(cosmetics())
