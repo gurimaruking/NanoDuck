@@ -66,6 +66,20 @@ GROUPS = {
 }
 
 
+# Per-mesh colour. The shells arrive as separate parts, so this costs nothing
+# and it is most of what was left of "it does not look like a MicroDuck": the
+# real robot is off-white with an ORANGE bill and brow band and a black eye, and
+# a render in one flat cream reads as a generic white robot instead.
+COLOUR = {
+    "_default":          "0.93 0.92 0.89 1",   # shells
+    "jaw":               "0.95 0.45 0.05 1",   # the bill
+    "face_part":         "0.95 0.45 0.05 1",   # the band around the brow
+    "noenoeil":          "0.09 0.09 0.11 1",   # eye
+    "sole_left":         "0.95 0.55 0.10 1",   # webbed feet
+    "sole_right":        "0.95 0.55 0.10 1",
+}
+
+
 def extra_matrix(group):
     rx, ry, rz = GROUPS[group][2]
     return trimesh.transformations.euler_matrix(
@@ -150,8 +164,8 @@ def cluster_geoms(group, target_centre_mm):
         p = E[:3, :3] @ (pos * 1000.0 * scale) + shift
         quat = compose(group, quat)
         out.append('        <geom name="skin_%s" type="mesh" mesh="%s" class="skin" '
-                   'pos="%s" quat="%s"/>\n'
-                   % (name, name,
+                   'rgba="%s" pos="%s" quat="%s"/>\n'
+                   % (name, name, COLOUR.get(name, COLOUR["_default"]),
                       " ".join("%.5f" % (v * 0.001) for v in p),
                       " ".join("%.6f" % v for v in quat)))
     return "".join(out)
@@ -245,7 +259,12 @@ PRINTED = {
     "left_thigh": (["thigh_L"], None), "right_thigh": (["thigh_R"], None),
     "left_shin": (["shin_L"], None), "right_shin": (["shin_R"], None),
     "left_foot": (["foot_mount_L"], None), "right_foot": (["foot_mount_R"], None),
-    "neck": (["neck_link_a", "neck_link_b"], None),
+    # The neck is the one link that runs UP. parts.link() builds every part
+    # with its driving joint at -Z, which is right for all six leg parts and
+    # upside down here: the head sits at +20 mm and the part reached from -44
+    # to +5, i.e. down into the trunk. Flipped 180 deg about X, which also
+    # leaves neck_pitch on Y and head_yaw on Z, just with reversed sense.
+    "neck": (["neck_link_a", "neck_link_b"], (0.0, 1.0, 0.0, 0.0)),
 }
 
 

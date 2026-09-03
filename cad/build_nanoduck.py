@@ -84,7 +84,21 @@ NECK_LEN = 20.0                 # neck_pitch -> head_yaw (printed part length)
 NECK_SINK = 8.0                 # how far the neck root sits INSIDE the trunk, so
                                 # the head nestles instead of floating above it
 HEAD = (104.3, 78.0, 50.4)      # = cosmetic head cluster at 0.85
-HEAD_Z = 4.0                    # head cluster centre above the head_yaw axis
+
+# Where the head sits is DERIVED, not typed. Two hand-tuned numbers (NECK_SINK
+# 8 mm and HEAD_Z 4 mm) were fine for a 37 mm head and buried a 50 mm one
+# 10.6 mm inside the body -- which is what "the neck looks wrong" actually was:
+# no neck was visible because the head was inside the trunk.
+#
+# Constraint: the underside of the head clears the top of the trunk by HEAD_GAP.
+# Solving it here means changing the head scale cannot reintroduce the bug, and
+# check_head_clearance() measures the result off the compiled model.
+HEAD_GAP = 1.5                  # mm of daylight between head and body
+HEAD_X = 18.0                   # head centre ahead of the head_yaw axis: the neck
+                                # meets the skull toward its rear, as on MicroDuck,
+                                # so the bill projects and the head does not sit
+                                # over the tail
+HEAD_Z = (TRUNK[2] / 2 + HEAD_GAP) - (TRUNK[2] / 2 - NECK_SINK) - NECK_LEN + HEAD[2] / 2
 
 
 # --- Masses [kg] not accounted for by a servo box -----------------------------
@@ -315,8 +329,8 @@ def build_robot() -> str:
     a(link_geom("neck_link", (10, 12, NECK_LEN), (0, 0, NECK_LEN / 2), M_NECK_LINK))
     a('        <body name="head" pos="%s">\n' % m(0, 0, NECK_LEN))
     a('          <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>\n')
-    a(link_geom("head_shell", HEAD, (0, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
-    a(COS.cluster_geoms("head", (0.0, 0.0, HEAD_Z)))
+    a(link_geom("head_shell", HEAD, (HEAD_X, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
+    a(COS.cluster_geoms("head", (HEAD_X, 0.0, HEAD_Z)))
     # Sensor mounting points, matching MicroDuck's own set so its tooling finds
     # the names it expects. Nothing in the walking observation reads these --
     # that is base_ang_vel and gravity off the trunk IMU -- but the head shell
@@ -357,6 +371,67 @@ def trunk_z() -> float:
     import math
     drop = THIGH * math.cos(HIP_PITCH_0) + SHIN * math.cos(HIP_PITCH_0 + KNEE_0)
     return ANKLE_TO_SOLE + FOOT[2] + drop + HIP_ROLL_TO_PITCH + TRUNK[2] / 2
+
+
+def _shell_world_bounds(scene_path, names):
+    """World-space bounding box [mm] of a set of skin geoms, in the home pose."""
+    import mujoco
+    import numpy as np
+    import trimesh
+
+    m = mujoco.MjModel.from_xml_path(scene_path)
+    d = mujoco.MjData(m)
+    mujoco.mj_resetDataKeyframe(m, d, 0)
+    mujoco.mj_forward(m, d)
+    lo = np.full(3, np.inf)
+    hi = np.full(3, -np.inf)
+    for g in range(m.ngeom):
+        n = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_GEOM, g) or ""
+        if n not in names:
+            continue
+        mid = m.geom_dataid[g]
+        va, vn = m.mesh_vertadr[mid], m.mesh_vertnum[mid]
+        v = m.mesh_vert[va:va + vn].copy()
+        v = v @ trimesh.transformations.quaternion_matrix(
+            m.geom_quat[g])[:3, :3].T + m.geom_pos[g]
+        bi = m.geom_bodyid[g]
+        v = v @ d.xmat[bi].reshape(3, 3).T + d.xpos[bi]
+        lo = np.minimum(lo, 1000 * v.min(0))
+        hi = np.maximum(hi, 1000 * v.max(0))
+    return lo, hi
+
+
+def measure_head_gap(scene_path: str) -> float:
+    """mm between the underside of the head shells and the top of the trunk."""
+    head = {"skin_" + n for n in COS.GROUPS["head"][1]}
+    hlo, _ = _shell_world_bounds(scene_path, head)
+    _, thi = _shell_world_bounds(scene_path, {"skin_left_shell", "skin_right_shell"})
+    return float(hlo[2] - thi[2])
+
+
+def check_head_clearance(scene_path: str) -> bool:
+    """Does the head sit ON the body rather than inside it?
+
+    This is the check that "the neck looks wrong" turned out to need. The head
+    was 10.6 mm inside the trunk, so no neck was visible at all -- and none of
+    the existing tests noticed, because every one of them was about the head's
+    own orientation or the joint chain, not about two shells trying to occupy
+    the same space.
+    """
+    head = {"skin_" + n for n in COS.GROUPS["head"][1]}
+    hlo, hhi = _shell_world_bounds(scene_path, head)
+    tlo, thi = _shell_world_bounds(scene_path, {"skin_left_shell", "skin_right_shell"})
+    gap = float(hlo[2] - thi[2])
+    ok = gap > 0.0
+    print()
+    print("head / body clearance:")
+    print("   head shells  z [%6.1f, %6.1f] mm   x [%6.1f, %6.1f]"
+          % (hlo[2], hhi[2], hlo[0], hhi[0]))
+    print("   trunk panels z [%6.1f, %6.1f] mm   x [%6.1f, %6.1f]"
+          % (tlo[2], thi[2], tlo[0], thi[0]))
+    print("   gap          %+6.1f mm   %s" % (gap, "ok" if ok else "HEAD BURIED IN THE BODY"))
+    print("   bill reaches %+6.1f mm ahead of the trunk nose" % (hhi[0] - thi[0] * 0 - 34.4))
+    return ok
 
 
 def check_joints(scene_path: str) -> bool:
@@ -506,8 +581,35 @@ def build_scene() -> str:
 """ % (qpos, home)
 
 
+def solve_head_z(passes: int = 4) -> None:
+    """Set HEAD_Z so the head clears the trunk by HEAD_GAP, by measuring.
+
+    The closed-form version of this was wrong twice: it missed that the head is
+    pitched by neck_pitch (so its underside drops by the tilt) and that the
+    cluster's own vertical centre is not its lowest point. Both are easy to
+    forget again the next time the head scale or the neck length moves.
+
+    So do not derive it -- measure it. The gap is linear in HEAD_Z, so writing
+    the model, reading the real gap in world coordinates and adding the deficit
+    converges in one step; the extra passes are just insurance.
+    """
+    global HEAD_Z
+    for _ in range(passes):
+        with open(os.path.join(OUT, "nanoduck.xml"), "w", encoding="utf-8",
+                  newline="\n") as f:
+            f.write(build_robot())
+        with open(os.path.join(OUT, "scene_nanoduck.xml"), "w", encoding="utf-8",
+                  newline="\n") as f:
+            f.write(build_scene())
+        gap = measure_head_gap(os.path.join(OUT, "scene_nanoduck.xml"))
+        if abs(gap - HEAD_GAP) < 0.1:
+            return
+        HEAD_Z += (HEAD_GAP - gap)
+
+
 def main() -> None:
     os.makedirs(OUT, exist_ok=True)
+    solve_head_z()
     for name, text in (("nanoduck.xml", build_robot()),
                        ("scene_nanoduck.xml", build_scene())):
         path = os.path.join(OUT, name)
@@ -522,6 +624,7 @@ def main() -> None:
     print("cosmetic orientation:")
     ok = COS.check_orientation()
     ok &= check_joints(scene)
+    ok &= check_head_clearance(scene)
     check_static_balance(scene)
     if not ok:
         raise SystemExit("\nCHECKS FAILED -- the model is wrong, do not train on it.")
