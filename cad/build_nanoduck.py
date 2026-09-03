@@ -83,7 +83,7 @@ NECK_X, NECK_Z = 16.0, 14.0     # neck_pitch axis, well forward on the trunk lid
 NECK_LEN = 20.0                 # neck_pitch -> head_yaw (printed part length)
 NECK_SINK = 8.0                 # how far the neck root sits INSIDE the trunk, so
                                 # the head nestles instead of floating above it
-HEAD = (76.1, 56.9, 36.8)       # = cosmetic head cluster at 0.62
+HEAD = (104.3, 78.0, 50.4)      # = cosmetic head cluster at 0.85
 HEAD_Z = 4.0                    # head cluster centre above the head_yaw axis
 
 
@@ -106,7 +106,8 @@ M_THIGH = 0.00314
 M_SHIN = 0.00297
 M_FOOT_MOUNT = 0.00137
 M_SOLE = 0.00301                # cosmetic sole at 0.75
-M_HEAD = 0.02108                # top + bottom shell + face + jaw + 2 eyes at 0.62
+M_HEAD = 0.0543                 # top + bottom shell + face + jaw + 2 eyes at 0.85
+                                # (mass goes as scale^3: 0.62 -> 0.85 is x2.6)
 M_NECK_LINK = 0.00167
 
 # --- Home pose [rad] ----------------------------------------------------------
@@ -310,13 +311,19 @@ def build_robot() -> str:
     a('      <body name="neck" pos="%s">\n' % m(NECK_X, 0, TRUNK[2] / 2 - NECK_SINK))
     a('        <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>\n')
     a(COS.printed_geom("neck"))
-    a(servo_geom("head_yaw_servo", "micro", (0, 0, NECK_LEN)))
+    a(servo_geom("head_yaw_servo", "MG90S", (0, 0, NECK_LEN)))
     a(link_geom("neck_link", (10, 12, NECK_LEN), (0, 0, NECK_LEN / 2), M_NECK_LINK))
     a('        <body name="head" pos="%s">\n' % m(0, 0, NECK_LEN))
     a('          <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>\n')
     a(link_geom("head_shell", HEAD, (0, 0, HEAD_Z), M_HEAD, "0.95 0.93 0.86 1"))
     a(COS.cluster_geoms("head", (0.0, 0.0, HEAD_Z)))
+    # Sensor mounting points, matching MicroDuck's own set so its tooling finds
+    # the names it expects. Nothing in the walking observation reads these --
+    # that is base_ang_vel and gravity off the trunk IMU -- but the head shell
+    # is MicroDuck's and has the holes, so the model should say where they are.
     a('          <site name="head_camera" group="3" pos="%s"/>\n' % m(16, 0, HEAD_Z + 4))
+    a('          <site name="tof" group="3" pos="%s"/>\n' % m(16, 9, HEAD_Z + 4))
+    a('          <site name="head_imu" group="3" pos="%s"/>\n' % m(0, 0, HEAD_Z))
     a('          <site name="mouth_tip" group="3" pos="%s"/>\n' % m(30, 0, HEAD_Z - 5))
     a('        </body>\n')
     a('      </body>\n')

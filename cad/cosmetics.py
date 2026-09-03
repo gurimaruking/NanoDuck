@@ -54,7 +54,11 @@ GROUPS = {
     # fore-aft EXTENT and shipped the duck upside down. Extent along X says the
     # long axis is X; it says nothing whatever about a 180 degree flip around
     # it. Up/down and front/back are separate facts and need separate tests.
-    "head": (0.62, ["bottom_head_shell", "top_head_shell", "face_part", "jaw", "noenoeil"],
+    # head at the SAME scale as the body, which is the whole point: MicroDuck's
+    # head-to-body ratio is 1.52, and any two different scales destroy it. At
+    # 0.62 the head measured 1.11 -- 27% too small, which is exactly why the
+    # first renders read as "a duck, but wrong". It costs 33 g.
+    "head": (0.85, ["bottom_head_shell", "top_head_shell", "face_part", "jaw", "noenoeil"],
              (0.0, 270.0, 0.0)),
     "trunk": (0.85, ["left_shell", "right_shell"], (0.0, 0.0, 0.0)),
     "sole_left": (0.75, ["sole_left"], (90.0, 0.0, 0.0)),

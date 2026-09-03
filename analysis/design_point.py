@@ -67,9 +67,29 @@ def envelope(sv, w):
     return np.minimum(t, sv["cap"]) if "cap" in sv else t
 
 
+# Head joints do not scale with the legs.  A neck servo carries the head, not
+# the robot, so its demand goes with the HEAD's mass and size -- and NanoDuck's
+# head is a MicroDuck head at 0.85, not a scaled-down robot.  Using the leg
+# transfer for them under-read head_yaw by a third and hid the fact that a
+# 3.7 g micro servo cannot drive it.
+HEAD_SCALE = 0.85
+M_HEAD_MICRO = 0.172            # MicroDuck head assembly, from its MJCF inertials
+M_HEAD_NANO = 0.0543            # cosmetic head cluster at 0.85, cad/parts.py
+HEAD_JOINTS = ("neck_pitch", "head_pitch", "head_yaw", "head_roll")
+
+
 def demand(joint, mass, leg):
-    """Paired (tau, signed w) samples transferred to this mass and leg length."""
+    """Paired (tau, signed w) samples transferred to this design.
+
+    Leg joints scale with robot mass and leg length; head joints with head mass
+    and head size.  Passing the leg numbers to a neck servo is meaningless.
+    """
     i = NAMES.index(joint)
+    if joint in HEAD_JOINTS:
+        tau = TAU[:, i] * (M_HEAD_NANO / M_HEAD_MICRO) * HEAD_SCALE
+        w = W[:, i] / np.sqrt(HEAD_SCALE)
+        aligned = np.abs(w) * np.where(np.sign(w) * SGN[:, i] >= 0, 1.0, -1.0)
+        return tau, aligned
     tau = TAU[:, i] * (mass / M_MICRO) * (leg / L_MICRO)
     w = W[:, i] * np.sqrt(L_MICRO / leg)
     aligned = np.abs(w) * np.where(np.sign(w) * SGN[:, i] >= 0, 1.0, -1.0)
@@ -109,7 +129,11 @@ ASSIGN = {
     "left_hip_pitch": "MG90S@6V", "right_hip_pitch": "MG90S@6V",
     "left_knee": "MG92B@6V", "right_knee": "MG92B@6V",
     "left_ankle": "MG90S@6V", "right_ankle": "MG90S@6V",
-    "neck_pitch": "micro3.7g", "head_yaw": "micro3.7g",
+    # head_yaw carries the whole head against its own inertia, and the head is
+    # a MicroDuck head at 0.85 -- 54 g, not the 21 g it was at 0.62. A 3.7 g
+    # micro servo comes out at 102% of its envelope there. neck_pitch stays
+    # micro: it works against gravity on a short arm, not against inertia.
+    "neck_pitch": "micro3.7g", "head_yaw": "MG90S@6V",
 }
 ALL_MG90S = {j: ("micro3.7g" if s == "micro3.7g" else "MG90S@6V") for j, s in ASSIGN.items()}
 
@@ -120,16 +144,16 @@ LEG_MM = 50.0     # thigh 25 + shin 25; see cad/build_nanoduck.py
 # The round numbers this replaced were badly optimistic -- 33 g of structure
 # turned into 65 g the moment the geometry existed.
 BOM = [
-    ("MG90S x6 (hip roll/pitch, ankles)", 6 * 0.0134),
+    ("MG90S x7 (hip roll/pitch, ankles, head yaw)", 7 * 0.0134),
     ("MG92B x2 (knees)", 2 * 0.0138),
-    ("micro servo x2 (neck, head yaw)", 2 * 0.0037),
+    ("micro servo x1 (neck pitch)", 1 * 0.0037),
     ("2S 450 mAh LiHV", 0.028),
     ("control PCB (ESP32-S3-MINI + driver + ADC + BEC)", 0.012),
     ("wiring", 0.008),
     ("trunk chassis (estimate -- not yet drawn)", 0.012),
     ("printed leg structure x2 (yoke, thigh, shin, foot)", 2 * 0.01037),
     ("printed neck link", 0.00167),
-    ("cosmetic head: shells, face, jaw, eyes (MicroDuck at 0.62)", 0.02108),
+    ("cosmetic head: shells, face, jaw, eyes (MicroDuck at 0.85)", 0.0543),
     ("cosmetic body panels (MicroDuck at 0.85)", 0.0159),
     ("cosmetic soles x2 (MicroDuck at 0.75)", 2 * 0.00301),
 ]

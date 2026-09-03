@@ -62,8 +62,12 @@ RANGE_RAD = 1.571          # +/- 90 deg on every leg pitch joint
 # trunk_shell_* are MicroDuck's INNER frame and are dropped -- NanoDuck has its
 # own chassis, and they were 14 g of nothing.
 COSMETIC = {
-    "top_head_shell": 0.62, "bottom_head_shell": 0.62,
-    "face_part": 0.62, "jaw": 0.62, "noenoeil": 0.62,
+    # Head at the SAME scale as the body. MicroDuck's head-to-body ratio is
+    # 1.52; two different scales destroy it, and at 0.62 the head measured 1.11
+    # -- 27% too small, which is why the renders read as "a duck, but wrong".
+    # Kept in step with cad/cosmetics.py GROUPS, which the MJCF uses.
+    "top_head_shell": 0.85, "bottom_head_shell": 0.85,
+    "face_part": 0.85, "jaw": 0.85, "noenoeil": 0.85,
     "left_shell": 0.85, "right_shell": 0.85,
     "sole_left": 0.75, "sole_right": 0.75,
 }
@@ -180,7 +184,10 @@ def build_links():
         "thigh": link("thigh", THIGH, mg, kn, flip_driving=True),
         "shin": link("shin", SHIN, kn, mg),
         "foot_mount": link("foot_mount", ANKLE_TO_SOLE, mg, None),
-        "neck_link": link("neck_link", NECK_LEN, mi, mi),
+        # head_yaw is an MG90S now, not a micro: the head is 54 g of MicroDuck
+        # shell and a 3.7 g servo runs at 102% of its envelope against that
+        # inertia (analysis/design_point.py).
+        "neck_link": link("neck_link", NECK_LEN, mi, mg),
     }
 
 

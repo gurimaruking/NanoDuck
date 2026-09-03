@@ -1,7 +1,7 @@
 category,item,spec,qty,unit_price_jpy,subtotal_jpy,mass_g_each,on_robot_g,notes
 servo,MG92B,metal gear / ~3.1kgf-cm @6V / 13.8g,3,900,2700,13.8,27.6,"KNEES ONLY (2 + 1 spare). Same 22.8x12.2 footprint as MG90S, +0.4g, ~45% more torque. Moves the mass budget from 205g to 245g -- cheaper than any airframe diet. PROVISIONAL SPEC: bench-measure before trusting."
-servo,MG90S,metal gear / 2.2kgf-cm @6V / 13.4g,8,350,2800,13.4,80.4,"6 used (hip roll x2, hip pitch x2, ankle x2) + 2 spare. Buy one lot; clones vary."
-servo,micro servo 3.7g,~0.06Nm / 20x8.4x20mm,3,600,1800,3.7,7.4,"2 used (neck_pitch, head_yaw) + 1 spare. head_yaw is the binding joint at 76%."
+servo,MG90S,metal gear / 2.2kgf-cm @6V / 13.4g,9,350,3150,13.4,93.8,"7 used (hip roll x2, hip pitch x2, ankle x2, HEAD YAW) + 2 spare. head_yaw was a 3.7g micro until the head grew to MicroDuck proportions: 54g of shell at 0.85 scale puts a micro servo at 102% of its envelope. Buy one lot; clones vary."
+servo,micro servo 3.7g,~0.06Nm / 20x8.4x20mm,2,600,1200,3.7,3.7,"1 used (neck_pitch) + 1 spare. neck_pitch works against gravity on a short arm (34%); head_yaw works against the head's inertia and needed an MG90S."
 compute,ESP32-S3-MINI-1-N8,8MB flash / no PSRAM,2,900,1800,1.0,1.0,"Module, not a devkit: a devkit is 8g of USB connector and headers we do not need. No PSRAM because the policy is quantised to int8 (193KB) and lives in internal SRAM."
 compute,custom control PCB,40x30mm 2-layer,1,3000,3000,11.0,11.0,"Carries the ESP32-S3-MINI, PCA9685, MCP3208, 6V BEC, IMU and the 10 pot dividers. One board instead of five breakouts saves ~15g and most of the wiring."
 driver,PCA9685,16ch 12-bit PWM I2C (bare IC),2,300,600,0.2,0.2,"10 servos; ESP32-S3 LEDC has only 8 channels."
@@ -19,5 +19,5 @@ mech,bearing MR63ZZ,3x6x2.5mm,12,120,1440,0.4,4.0,"MG90S output shaft is single-
 mech,carbon rod 3mm,for the shin,1,500,500,,2.0,
 mech,M2 screw assortment,6/8/10mm + nuts,1,1200,1200,,6.0,
 mech,PETG filament,1kg,1,2500,2500,,33.0,"~33g printed: trunk shell 10, 8 joint brackets 12, feet 7, head/neck 4. Building the geometry turned up brackets the first round-number estimate missed. PETG over PLA: the joints see real load."
-,,,,PURCHASE TOTAL,28695,,,"Includes spares. Servo cost ~7300 JPY vs ~63000 for 14 XL330."
-,,,,ON-ROBOT MASS,,,196.4,"Matches sim/nanoduck.xml exactly -- the model is the authority on mass. Worst joint: knee at 62%, comfortably under the 76% MicroDuck's own knee runs at."
+,,,,PURCHASE TOTAL,29445,,,"Includes spares. Servo cost ~7050 JPY vs ~63000 for 14 XL330."
+,,,,ON-ROBOT MASS,,,283.7,"Matches sim/nanoduck.xml exactly -- the model is the authority on mass. Worst joint: knee at 90%. It was 62% before the shells and 76% before the head was brought to MicroDuck proportions; looking right costs 87g and 28 points of margin."

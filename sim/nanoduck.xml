@@ -23,11 +23,11 @@
   </default>
 
   <asset>
-    <mesh name="bottom_head_shell" file="bottom_head_shell.stl" scale="0.6200 0.6200 0.6200"/>
-    <mesh name="top_head_shell" file="top_head_shell.stl" scale="0.6200 0.6200 0.6200"/>
-    <mesh name="face_part" file="face_part.stl" scale="0.6200 0.6200 0.6200"/>
-    <mesh name="jaw" file="jaw.stl" scale="0.6200 0.6200 0.6200"/>
-    <mesh name="noenoeil" file="noenoeil.stl" scale="0.6200 0.6200 0.6200"/>
+    <mesh name="bottom_head_shell" file="bottom_head_shell.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="top_head_shell" file="top_head_shell.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="face_part" file="face_part.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="jaw" file="jaw.stl" scale="0.8500 0.8500 0.8500"/>
+    <mesh name="noenoeil" file="noenoeil.stl" scale="0.8500 0.8500 0.8500"/>
     <mesh name="left_shell" file="left_shell.stl" scale="0.8500 0.8500 0.8500"/>
     <mesh name="right_shell" file="right_shell.stl" scale="0.8500 0.8500 0.8500"/>
     <mesh name="sole_left" file="sole_left.stl" scale="0.7500 0.7500 0.7500"/>
@@ -85,17 +85,19 @@
       <body name="neck" pos="0.01600 0.00000 0.00975">
         <joint name="neck_pitch" axis="0 1 0" range="-1.571 1.047"/>
         <geom name="skin_neck_link" type="mesh" mesh="neck_link" class="skin" rgba="0.22 0.22 0.24 1"/>
-        <geom name="head_yaw_servo" type="box" size="0.01000 0.01000 0.00420" pos="0.00000 0.00000 0.02000" mass="0.00370" class="viz" rgba="0.15 0.15 0.17 1"/>
+        <geom name="head_yaw_servo" type="box" size="0.01610 0.01425 0.00610" pos="0.00000 0.00000 0.02000" mass="0.01340" class="viz" rgba="0.15 0.15 0.17 1"/>
         <geom name="neck_link" type="box" size="0.00500 0.00600 0.01000" pos="0.00000 0.00000 0.01000" mass="0.00167" class="viz" rgba="0.85 0.72 0.25 1"/>
         <body name="head" pos="0.00000 0.00000 0.02000">
           <joint name="head_yaw" axis="0 0 1" range="-2.967 2.967"/>
-        <geom name="head_shell" type="box" size="0.03805 0.02845 0.01840" pos="0.00000 0.00000 0.00400" mass="0.02108" class="viz" rgba="0.95 0.93 0.86 1"/>
-        <geom name="skin_bottom_head_shell" type="mesh" mesh="bottom_head_shell" class="skin" pos="-0.00300 -0.00000 -0.00623" quat="0.707107 -0.000000 -0.000000 0.707107"/>
-        <geom name="skin_top_head_shell" type="mesh" mesh="top_head_shell" class="skin" pos="-0.00300 -0.00000 -0.00635" quat="0.707107 -0.000000 -0.000000 0.707107"/>
-        <geom name="skin_face_part" type="mesh" mesh="face_part" class="skin" pos="-0.00313 -0.00006 -0.00635" quat="0.707107 -0.000000 -0.000000 0.707107"/>
-        <geom name="skin_jaw" type="mesh" mesh="jaw" class="skin" pos="-0.00300 -0.00000 -0.00635" quat="0.707107 -0.000000 -0.000000 0.707107"/>
-        <geom name="skin_noenoeil" type="mesh" mesh="noenoeil" class="skin" pos="-0.00313 -0.00006 -0.00635" quat="0.707107 -0.000000 -0.000000 0.707107"/>
+        <geom name="head_shell" type="box" size="0.05215 0.03900 0.02520" pos="0.00000 0.00000 0.00400" mass="0.05430" class="viz" rgba="0.95 0.93 0.86 1"/>
+        <geom name="skin_bottom_head_shell" type="mesh" mesh="bottom_head_shell" class="skin" pos="-0.00412 -0.00000 -0.01002" quat="0.707107 -0.000000 -0.000000 0.707107"/>
+        <geom name="skin_top_head_shell" type="mesh" mesh="top_head_shell" class="skin" pos="-0.00412 -0.00000 -0.01019" quat="0.707107 -0.000000 -0.000000 0.707107"/>
+        <geom name="skin_face_part" type="mesh" mesh="face_part" class="skin" pos="-0.00429 -0.00008 -0.01019" quat="0.707107 -0.000000 -0.000000 0.707107"/>
+        <geom name="skin_jaw" type="mesh" mesh="jaw" class="skin" pos="-0.00412 -0.00000 -0.01019" quat="0.707107 -0.000000 -0.000000 0.707107"/>
+        <geom name="skin_noenoeil" type="mesh" mesh="noenoeil" class="skin" pos="-0.00429 -0.00008 -0.01019" quat="0.707107 -0.000000 -0.000000 0.707107"/>
           <site name="head_camera" group="3" pos="0.01600 0.00000 0.00800"/>
+          <site name="tof" group="3" pos="0.01600 0.00900 0.00800"/>
+          <site name="head_imu" group="3" pos="0.00000 0.00000 0.00400"/>
           <site name="mouth_tip" group="3" pos="0.03000 0.00000 -0.00100"/>
         </body>
       </body>
